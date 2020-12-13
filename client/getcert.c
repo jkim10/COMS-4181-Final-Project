@@ -5,10 +5,32 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
+
+
+char *get_ssl_err(SSL *ssl, int err)
+{
+	switch (SSL_get_error(ssl, err)) {
+		case SSL_ERROR_NONE: return "SSL_ERROR_NONE";
+		case SSL_ERROR_ZERO_RETURN: return "SSL_ERROR_ZERO_RETURN";
+		case SSL_ERROR_WANT_READ: return "SSL_ERROR_WANT_READ";
+		case SSL_ERROR_WANT_WRITE: return "SSL_ERROR_WANT_WRITE";
+		case SSL_ERROR_WANT_CONNECT: return "SSL_ERROR_WANT_CONNECT";
+		case SSL_ERROR_WANT_ACCEPT: return "SSL_ERROR_WANT_ACCEPT";
+		case SSL_ERROR_WANT_X509_LOOKUP: return "SSL_ERROR_WANT_X509_LOOKUP";
+		case SSL_ERROR_WANT_ASYNC: return "SSL_ERROR_WANT_ASYNC";
+		case SSL_ERROR_WANT_ASYNC_JOB: return "SSL_ERROR_WANT_ASYNC_JOB";
+		case SSL_ERROR_SYSCALL: return "SSL_ERROR_SYSCALL";
+		case SSL_ERROR_SSL: return "SSL_ERROR_SSL";
+	}
+
+	return NULL;
+}
 
 int main(int argc, char **argv)
 {
@@ -17,7 +39,7 @@ int main(int argc, char **argv)
 	SSL *ssl;
 	const SSL_METHOD *meth;
 	BIO *sbio;
-	int err; char *s;
+	int err, res;
 
 	int ilen;
 	char ibuf[512];
@@ -72,35 +94,79 @@ int main(int argc, char **argv)
 
 	err = SSL_connect(ssl);
 	if (SSL_connect(ssl) != 1) {
-		switch (SSL_get_error(ssl, err)) {
-			case SSL_ERROR_NONE: s="SSL_ERROR_NONE"; break;
-			case SSL_ERROR_ZERO_RETURN: s="SSL_ERROR_ZERO_RETURN"; break;
-			case SSL_ERROR_WANT_READ: s="SSL_ERROR_WANT_READ"; break;
-			case SSL_ERROR_WANT_WRITE: s="SSL_ERROR_WANT_WRITE"; break;
-			case SSL_ERROR_WANT_CONNECT: s="SSL_ERROR_WANT_CONNECT"; break;
-			case SSL_ERROR_WANT_ACCEPT: s="SSL_ERROR_WANT_ACCEPT"; break;
-			case SSL_ERROR_WANT_X509_LOOKUP: s="SSL_ERROR_WANT_X509_LOOKUP"; break;
-			case SSL_ERROR_WANT_ASYNC: s="SSL_ERROR_WANT_ASYNC"; break;
-			case SSL_ERROR_WANT_ASYNC_JOB: s="SSL_ERROR_WANT_ASYNC_JOB"; break;
-			case SSL_ERROR_SYSCALL: s="SSL_ERROR_SYSCALL"; break;
-			case SSL_ERROR_SSL: s="SSL_ERROR_SSL"; break;
-		}
-		fprintf(stderr, "SSL error: %s\n", s);
+		fprintf(stderr, "SSL error: %s\n", get_ssl_err(ssl, err));
 		ERR_print_errors_fp(stderr);
 		return 3;
 	}
 
-    // Write contents of request
+    /* Send request */
 	SSL_write(ssl, obuf, strlen(obuf));
 
     SSL_write(ssl, ubuf, strlen(ubuf));
     SSL_write(ssl, pbuf, strlen(pbuf));
+	
+	int key_file = open(argv[3], O_RDONLY);
+	if (key_file < 0) {
+		perror("Failed to open keyfile");
+		exit(1);
+	}
+	while ((res = read(key_file, ibuf, sizeof(ibuf))) > 0) {
+		SSL_write(ssl, ibuf, res);
+	}
+	close(key_file);
 
 
-	while ((ilen = SSL_read(ssl, ibuf, sizeof ibuf - 1)) > 0) {
-		ibuf[ilen] = '\0';
-		printf("%s", ibuf);
+	/* Parse response */
+	if (SSL_read(ssl, ibuf, strlen("HTTP/1.0 200 OK\n")) <= 0) {
+		// read failed
+		SSL_shutdown(ssl);
+		fprintf(stderr, "SSL error: %s\n", get_ssl_err(ssl, err));
+		ERR_print_errors_fp(stderr);
+		exit(1);
+    }
+
+	// If there's anything but a 200 OK response, quit
+	if (!strcmp(ibuf, "HTTP/1.0 200 OK\n") && !strcmp(ibuf, "HTTP/1.1 200 OK\n")) {
+		SSL_shutdown(ssl);
+		fprintf(stderr, "Did not receive 200 OK response\n");
+		exit(1);
 	}
 
+	// Read past the rest of the headers - unfortunately 1 byte at a time
+	char curr, prev = 0;
+	while (SSL_read(ssl, &curr, 1) > 0) {
+		if (curr == '\r')
+			continue;
+		if (curr == '\n' && prev == '\n')
+			break;
+		
+		prev = curr;
+	}
+
+	/* Read the certificate */
+
+	// Create destination file
+	char filename[256] = "./certificates/";
+	strncat(filename, ubuf, sizeof(filename) - strlen("./certificates"));
+	int dest = open(filename, O_CREAT | O_WRONLY); // if file already exists it will be overwritten
+	if (dest < 0 ){
+		perror("Failed to create certificate file");
+		SSL_shutdown(ssl);
+		exit(1);
+	}
+
+	// Write to file
+	while ((ilen = SSL_read(ssl, ibuf, sizeof(ibuf) - 1)) > 0) {
+		res = write(dest, ibuf, ilen);
+		if (res < ilen) {
+			perror("Write to certificate file failed");
+			SSL_shutdown(ssl);
+			close(dest);
+			exit(1);
+		}
+	}
+
+	SSL_shutdown(ssl);
+	close(dest);
 	return 0;
 }
