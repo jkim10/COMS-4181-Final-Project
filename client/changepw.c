@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 	char ibuf[512];
     char ubuf[512];
     char pbuf[512];
-	int u_len, p_len;
+    char new_pbuf[512];
 	char *obuf = "GET /getcert HTTP/1.0\n\n";
 
 	struct sockaddr_in sin;
@@ -53,19 +53,15 @@ int main(int argc, char **argv)
 	struct hostent *he;
 
     if (argc != 6) {
-        fprintf(stderr, "Usage: ./getcert <username> <password> <path-to-public-key> <CAfile> <CApath>");
+        fprintf(stderr, "Usage: ./changepw <username> <password> <new_password> <CAfile> <CApath>");
         exit(1);
     }
 
-	//TODO: check if username or password contain a newline. this is illegal
+    //TODO: append newlines
+    strncpy(ubuf, argv[1], sizeof(ubuf)-1);
+    strncpy(pbuf, argv[2], sizeof(pbuf)-1);
+    strncpy(pbuf, argv[2], sizeof(new_pbuf)-1);
 
-    strncpy(ubuf, argv[1], sizeof(ubuf)-2);
-	u_len = strlen(ubuf) + 1;
-	ubuf[u_len - 1] = '\n';
-    strncpy(pbuf, argv[2], sizeof(pbuf)-2);
-	p_len = strlen(pbuf) + 1;
-	pbuf[p_len - 1] = '\n';
-	
 	SSL_library_init(); /* load encryption & hash algorithms for SSL */         	
 	SSL_load_error_strings(); /* load the error strings for good error reporting */
 
@@ -123,8 +119,9 @@ int main(int argc, char **argv)
     /* Send request */
 	SSL_write(ssl, obuf, strlen(obuf));
 
-    SSL_write(ssl, ubuf, u_len);
-    SSL_write(ssl, pbuf, p_len);
+    SSL_write(ssl, ubuf, strlen(ubuf));
+    SSL_write(ssl, pbuf, strlen(pbuf));
+    SSL_write(ssl, pbuf, strlen(new_pbuf));
 	
 	int key_file = open(argv[3], O_RDONLY);
 	if (key_file < 0) {
@@ -138,7 +135,6 @@ int main(int argc, char **argv)
 	}
 	close(key_file);
 
-	// Not sure how to tell the server it's EOM?
 
 	/* Parse response */
 	if (SSL_read(ssl, ibuf, strlen("HTTP/1.0 200 OK\n")) <= 0) {
@@ -149,6 +145,8 @@ int main(int argc, char **argv)
 		close(sock);
 		exit(1);
     }
+
+    if(strcmp(ibuf, "HTTP/1.0"))
 
 	// If there's anything but a 200 OK response, quit
 	if (!strcmp(ibuf, "HTTP/1.0 200 OK\n") && !strcmp(ibuf, "HTTP/1.1 200 OK\n")) {
