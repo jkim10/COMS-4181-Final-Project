@@ -35,8 +35,7 @@ int get_status_code(SSL *ssl, char *ibuf)
     }
 
     strncpy(code, ibuf + strlen("HTTP/1.0 "), 3);
-    printf("code = %s\n", code);
-
+	
     return atoi(code);
 
 }

@@ -13,17 +13,21 @@ int main(int argc, char **argv)
 	char ibuf[512];
     char ubuf[512];
     char pbuf[512];
+	char *newline = "\n";
+	char *content_length = "Content-Length:";
 	int u_len, p_len;
-	char *obuf = "GET /getcert HTTP/1.0\n\n";
+	char *obuf = "GET /getcert HTTP/1.0\n";
 
 	struct sockaddr_in sin;
 	int sock;
 	struct hostent *he;
 
-    if (argc != 6) {
-        fprintf(stderr, "Usage: ./getcert <username> <password> <path-to-public-key> <CAfile> <CApath>");
+    if (argc != 4) {
+        fprintf(stderr, "Usage: ./getcert <username> <password> <path-to-public-key>\n");
         exit(1);
     }
+
+	//TODO: use getpass()
 
 	//TODO: check if username or password contain a newline. this is illegal
 
@@ -64,7 +68,8 @@ int main(int argc, char **argv)
 
 	bzero(&sin, sizeof sin);
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(443);
+	//sin.sin_port = htons(443);
+	sin.sin_port = htons(8080);
 
 	he = gethostbyname("localhost");
 	memcpy(&sin.sin_addr, (struct in_addr *)he->h_addr, he->h_length);
@@ -85,9 +90,17 @@ int main(int argc, char **argv)
 	}
 
     /* Send request */
+	// Headers
 	SSL_write(ssl, obuf, strlen(obuf));
+	SSL_write(ssl, content_length, strlen(content_length));
+	SSL_write(ssl, "100", strlen("100"));
+	SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));
+
+	// Body
     SSL_write(ssl, ubuf, u_len);
+	SSL_write(ssl, newline, strlen(newline));
     SSL_write(ssl, pbuf, p_len);
+	SSL_write(ssl, newline, strlen(newline));
 	
 	int key_file = open(argv[3], O_RDONLY);
 	if (key_file < 0) {
@@ -99,10 +112,11 @@ int main(int argc, char **argv)
 	}
 	close(key_file);
 
-	// Not sure how to tell the server it's EOM?
+	// End of request
 
 	/* Parse response */
 	int response_code = get_status_code(ssl, ibuf);
+	printf("response code = %d\n", response_code);
 	// there are more specific values if we want to return nicer error messages...
 	if (response_code != 200)
 		goto out;
@@ -115,6 +129,7 @@ int main(int argc, char **argv)
 	// Create destination file
 	char filename[256] = "./certificates/";
 	strncat(filename, ubuf, sizeof(filename) - strlen("./certificates"));
+	//printf("filename=%s\n", filename);
 	int dest = open(filename, O_CREAT | O_WRONLY); // if file already exists it will be overwritten
 	if (dest < 0 ){
 		perror("Failed to create certificate file");

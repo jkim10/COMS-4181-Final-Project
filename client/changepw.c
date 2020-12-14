@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 
 	bzero(&sin, sizeof sin);
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(443);
+	sin.sin_port = htons(8080);
 
 	he = gethostbyname("localhost");
 	memcpy(&sin.sin_addr, (struct in_addr *)he->h_addr, he->h_length);
