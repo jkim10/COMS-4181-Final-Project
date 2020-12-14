@@ -46,7 +46,7 @@ int main(int argc, char **argv)
     char ubuf[512];
     char pbuf[512];
     char new_pbuf[512];
-	char *obuf = "GET /getcert HTTP/1.0\n\n";
+	char *obuf = "POST /changepw HTTP/1.0\n\n";
 
 	struct sockaddr_in sin;
 	int sock;
@@ -98,9 +98,7 @@ int main(int argc, char **argv)
 	memcpy(&sin.sin_addr, (struct in_addr *)he->h_addr, he->h_length);
 	if (connect(sock, (struct sockaddr *)&sin, sizeof sin) < 0) {
 		perror("connect");
-		SSL_CTX_free(ctx);
-		close(sock);
-		return 2;
+		goto out;
 	}
 
 	sbio=BIO_new(BIO_s_socket());
@@ -111,9 +109,7 @@ int main(int argc, char **argv)
 	if (SSL_connect(ssl) != 1) {
 		fprintf(stderr, "SSL error: %s\n", get_ssl_err(ssl, err));
 		ERR_print_errors_fp(stderr);
-		SSL_CTX_free(ctx);
-		close(sock);
-		return 3;
+		goto out;
 	}
 
     /* Send request */
@@ -126,9 +122,7 @@ int main(int argc, char **argv)
 	int key_file = open(argv[3], O_RDONLY);
 	if (key_file < 0) {
 		perror("Failed to open keyfile");
-		SSL_CTX_free(ctx);
-		close(sock);
-		exit(1);
+		goto out;
 	}
 	while ((res = read(key_file, ibuf, sizeof(ibuf))) > 0) {
 		SSL_write(ssl, ibuf, res);
@@ -137,35 +131,17 @@ int main(int argc, char **argv)
 
 
 	/* Parse response */
-	if (SSL_read(ssl, ibuf, strlen("HTTP/1.0 200 OK\n")) <= 0) {
-		// read failed
-		fprintf(stderr, "SSL error: %s\n", get_ssl_err(ssl, err));
-		ERR_print_errors_fp(stderr);
-		SSL_CTX_free(ctx);
-		close(sock);
-		exit(1);
-    }
-
-    if(strcmp(ibuf, "HTTP/1.0"))
-
-	// If there's anything but a 200 OK response, quit
-	if (!strcmp(ibuf, "HTTP/1.0 200 OK\n") && !strcmp(ibuf, "HTTP/1.1 200 OK\n")) {
-		fprintf(stderr, "Did not receive 200 OK response\n");
-		SSL_CTX_free(ctx);
-		close(sock);
-		exit(1);
+	int response_code = get_status_code(ssl, ibuf);
+	if (response_code == 403) {
+		fprintf(stderr, "Messages pending. Cannot change password\n");
+		goto out;
+	} else if (response_code != 200) {
+		fprintf(stderr, "Server error. Failed to change password\n");
+		goto out;
 	}
 
-	// Read past the rest of the headers - unfortunately 1 byte at a time
-	char curr, prev = 0;
-	while (SSL_read(ssl, &curr, 1) > 0) {
-		if (curr == '\r')
-			continue;
-		if (curr == '\n' && prev == '\n')
-			break;
-		
-		prev = curr;
-	}
+	// Read past the rest of the headers
+	skip_headers(ssl);
 
 	/* Read the certificate */
 
@@ -175,9 +151,7 @@ int main(int argc, char **argv)
 	int dest = open(filename, O_CREAT | O_WRONLY); // if file already exists it will be overwritten
 	if (dest < 0 ){
 		perror("Failed to create certificate file");
-		SSL_CTX_free(ctx);
-		close(sock);
-		exit(1);
+		goto out;
 	}
 
 	// Write to file
@@ -185,14 +159,17 @@ int main(int argc, char **argv)
 		res = write(dest, ibuf, ilen);
 		if (res < ilen) {
 			perror("Write to certificate file failed");
-			SSL_CTX_free(ctx);
 			close(dest);
-			close(sock);
-			exit(1);
+			goto out;
 		}
 	}
 
 	close(dest);
 	SSL_CTX_free(ctx);
 	return 0;
+
+out: 
+	SSL_CTX_free(ctx);
+	close(sock);
+	return 1;
 }
