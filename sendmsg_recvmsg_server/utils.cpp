@@ -98,7 +98,7 @@ void UploadMessage(string message, string recipient)
 	DIR *dir = opendir(user_path.c_str());
 	if (dir == NULL)
 	{
-		cerr << "Invalid recipient: " << recipient << endl;
+		cerr << "Cannot upload message for " << recipient << endl;
 		return;
 	}
 	
@@ -136,4 +136,26 @@ void UploadMessage(string message, string recipient)
 	string file_path = "./users/" + recipient + "/messages/" + last_file;
 
 	WriteStringtoFile(message, file_path);
+}
+
+string GetMessage(string recipient)
+{
+	string user_path = "./users/" + recipient + "/messages";
+	DIR *dir = opendir(user_path.c_str());
+	if (dir == NULL)
+	{
+		cerr << "Cannot get messages" << endl;
+		return "";
+	}
+	
+	string message_path = user_path + "/00001";
+	if (access(message_path.c_str(), F_OK) == -1)
+	{
+		cerr << "No new messages" << endl;
+		return "";
+	}
+
+	closedir(dir);
+
+	return ReadFiletoString(message_path.c_str());
 }

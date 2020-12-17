@@ -24,6 +24,6 @@ string GetCert(string recipient);
 
 bool VerifyCert(string client_cert);
 
-void RemoveFile(string filename);
-
 void UploadMessage(string message, string recipient);
+
+string GetMessage(string recipient);
