@@ -12,6 +12,8 @@
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 
+//#include "utils.h"
+
 namespace my {
 
 template<class T> struct DeleterOf;
@@ -177,6 +179,11 @@ int main()
             ;
         try {
             std::string request = my::receive_http_message(bio.get());
+            // send back certs
+            //vector<string> recipients;
+            //string client_cert = ParseSendmsg(request, recipients);
+            //string encrypt_cert = CertstoSend(client_cert, recipients);
+            //my::send_http_response(bio.get(), encrypt_cert);
             printf("Got request:\n");
             printf("%s\n", request.c_str());
             my::send_http_response(bio.get(), "okay cool\n");
