@@ -10,6 +10,7 @@
 
 #include "ssl_common.h"
 #include "http_common.h"
+#include "req_res.h"
 
 namespace my {
 
@@ -39,7 +40,7 @@ std::vector<std::string> split_headers(const std::string& text)
 	return lines;
 }
 
-std::string receive_http_message(BIO *bio)
+HTTP_REQ receive_http_message(BIO *bio)
 {
 	std::string headers = my::receive_some_data(bio);
 	char *end_of_headers = strstr(&headers[0], "\r\n\r\n");
@@ -61,7 +62,7 @@ std::string receive_http_message(BIO *bio)
 	while (body.size() < content_length) {
 		body += my::receive_some_data(bio);
 	}
-	return headers + "\r\n" + body;
+	return HTTP_REQ(headers + "\r\n" + body);
 }
 
 void send_http_response(BIO *bio, const std::string& body)
@@ -81,6 +82,16 @@ my::UniquePtr<BIO> accept_new_tcp_connection(BIO *accept_bio)
 		return nullptr;
 	}
 	return my::UniquePtr<BIO>(BIO_pop(accept_bio));
+}
+
+void getcert(const PASS_AUTH_REQ auth_req) {
+	// TODO: retrive and send cert
+	std::cout << "getcert: \n" << auth_req.str();
+}
+
+void changepw(const PASS_AUTH_REQ auth_req) {
+	// TODO: change pwd
+	std::cout << "changepw: \n" << auth_req.str();
 }
 
 } // namespace my
@@ -118,9 +129,29 @@ int main()
 			| my::UniquePtr<BIO>(BIO_new_ssl(ctx.get(), 0))
 			;
 		try {
-			std::string request = my::receive_http_message(bio.get());
+			my::HTTP_REQ request = my::receive_http_message(bio.get());
 			printf("Got request:\n");
-			printf("%s\n", request.c_str());
+			printf("%s\n", request.str().c_str());
+			
+			if (request.method == "POST" && (request.endpoint == "getcert" || request.endpoint == "changepw")) {
+				my::PASS_AUTH_REQ auth_req(request.body);
+				if (!auth_req.verify()) {
+					my::send_http_response(bio.get(), "incorrect password!\n");
+					my::print_errors_and_throw("incorrect password!");
+				}
+				if (request.endpoint == "getcert") {
+					my::getcert(auth_req);
+				} else if (request.endpoint == "changepw") {
+					my::changepw(auth_req);
+				} else {
+					my::print_errors_and_throw("code not supposed to reach here...");
+				}
+			} else if (request.method == "POST" && request.endpoint == "changepw") {
+				
+			} else {
+				std::cerr << "Request Method/Endpoint Not Found!\n";
+			}
+			
 			my::send_http_response(bio.get(), "okay cool\n");
 		} catch (const std::exception& ex) {
 			printf("Worker exited with exception:\n%s\n", ex.what());

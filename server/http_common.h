@@ -31,11 +31,11 @@ public:
 	std::string value;
 	
 	std::string str() const {
-		return name + value;
+		return name + ": " + value + "\n";
 	}
 };
 
-class HTTP_REQ {
+class HTTP_REQ: HTTP_DATA {
 public:
 	static HTTP_REQ parse_http_req(const std::string& raw_req_str);
 	
@@ -62,7 +62,7 @@ public:
 	}
 };
 
-class HTTP_RES {
+class HTTP_RES: HTTP_DATA {
 public:
 	static HTTP_RES parse_http_res(const std::string& raw_res_str);
 	
@@ -112,7 +112,7 @@ std::vector<HTTP_HEADER> HTTP_HEADER::parse_http_header(const std::string& raw_h
 
 HTTP_REQ HTTP_REQ::parse_http_req(const std::string& raw_req_str) {
 	static const std::string regex_str = 
-		R"(^(GET|POST|PUT) \/([a-z]+)\/? HTTP\/\d.\d\r?\n((?:[a-zA-Z-]+: *[!-~ \t]+\r?\n)*)\r?\n)";
+		R"(^(GET|POST) \/([a-z]+)\/? HTTP\/\d.\d\r?\n((?:[a-zA-Z-]+: *[!-~ \t]+\r?\n)*)\r?\n)";
 	const std::regex reg(regex_str);
 	std::smatch sm;
 	

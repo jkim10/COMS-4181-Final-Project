@@ -6,7 +6,7 @@ LDLIBS=-lssl -lcrypto
 
 .PHONY: all clean test
 
-all: server server-certificate.pem regex_test
+all: server server-certificate.pem
 	
 server: 
 
@@ -25,4 +25,4 @@ clean:
 	rm -f server regex_test server-*.pem
 
 test:
-	curl -v --cacert server-certificate.pem --resolve duckduckgo.com:8080:127.0.0.1 https://duckduckgo.com:8080/
+	printf "username\npassword\ncertificate" | curl -v --cacert server-certificate.pem --resolve duckduckgo.com:8080:127.0.0.1 --data-binary @- https://duckduckgo.com:8080/getcert
