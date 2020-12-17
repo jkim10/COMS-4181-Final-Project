@@ -96,11 +96,6 @@ int main(int argc, char **argv)
 	SSL_write(ssl, "100", strlen("100"));
 	SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));
 
-	// Body
-    SSL_write(ssl, ubuf, u_len);
-	SSL_write(ssl, newline, strlen(newline));
-    SSL_write(ssl, pbuf, p_len);
-	SSL_write(ssl, newline, strlen(newline));
 	
 	int key_file = open(argv[3], O_RDONLY);
 	if (key_file < 0) {
