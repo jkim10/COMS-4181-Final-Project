@@ -27,6 +27,8 @@ int main(int argc, char **argv)
     char pbuf[512];
     char new_pbuf[512];
 	char *obuf = "POST /changepw HTTP/1.0\r\n";
+	char *newline = "\r\n";
+	char *content_length = "Content-Length:";
 
     if (argc != 6) {
         fprintf(stderr, "Usage: ./changepw <username> <password> <new_password> <CAfile> <CApath>");
@@ -36,7 +38,7 @@ int main(int argc, char **argv)
     //TODO: append newlines
     strncpy(ubuf, argv[1], sizeof(ubuf)-1);
     strncpy(pbuf, argv[2], sizeof(pbuf)-1);
-    strncpy(pbuf, argv[2], sizeof(new_pbuf)-1);
+    strncpy(new_pbuf, argv[3], sizeof(new_pbuf)-1);
 
 	SSL_library_init(); /* load encryption & hash algorithms for SSL */         	
 	SSL_load_error_strings(); /* load the error strings for good error reporting */
@@ -78,21 +80,34 @@ int main(int argc, char **argv)
 	}
 
     /* Send request */
+	// Headers
 	SSL_write(ssl, obuf, strlen(obuf));
+	SSL_write(ssl, content_length, strlen(content_length));
+	SSL_write(ssl, "200\r\n", strlen("200\r\n"));
+	SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));
 
+	printf("sent headers\n");
+
+	// Body
     SSL_write(ssl, ubuf, strlen(ubuf));
+	SSL_write(ssl, newline, strlen(newline));
     SSL_write(ssl, pbuf, strlen(pbuf));
-    SSL_write(ssl, pbuf, strlen(new_pbuf));
-	
-	// int key_file = open(argv[3], O_RDONLY);
-	// if (key_file < 0) {
-	// 	perror("Failed to open keyfile");
-	// 	goto out;
-	// }
-	// while ((res = read(key_file, ibuf, sizeof(ibuf))) > 0) {
-	// 	SSL_write(ssl, ibuf, res);
-	// }
-	// close(key_file);
+	SSL_write(ssl, newline, strlen(newline));
+    SSL_write(ssl, new_pbuf, strlen(new_pbuf));
+	SSL_write(ssl, newline, strlen(newline));
+
+	int key_file = open(argv[4], O_RDONLY);
+	if (key_file < 0) {
+		perror("Failed to open keyfile");
+		goto out;
+	}
+	while ((res = read(key_file, ibuf, sizeof(ibuf))) > 0) {
+		SSL_write(ssl, ibuf, res);
+	}
+	close(key_file);
+
+	printf("sent body\n");
+
 
 
 	/* Parse response */

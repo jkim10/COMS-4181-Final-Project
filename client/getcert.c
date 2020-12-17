@@ -12,7 +12,6 @@ int main(int argc, char **argv)
 	char ibuf[512], ubuf[512], pbuf[512];
 	char *newline = "\r\n";
 	char *content_length = "Content-Length:";
-	int u_len, p_len;
 	char *obuf = "GET /getcert HTTP/1.0\r\n";
 
     if (argc != 4) {
@@ -24,12 +23,8 @@ int main(int argc, char **argv)
 
 	//TODO: check if username or password contain a newline. this is illegal
 
-    strncpy(ubuf, argv[1], sizeof(ubuf)-2);
-	u_len = strlen(ubuf) + 1;
-	//ubuf[u_len - 1] = '\n';
-    strncpy(pbuf, argv[2], sizeof(pbuf)-2);
-	p_len = strlen(pbuf) + 1;
-	//pbuf[p_len - 1] = '\n';
+    strncpy(ubuf, argv[1], sizeof(ubuf)-1);
+	strncpy(pbuf, argv[2], sizeof(pbuf)-1);
 	
 	SSL_library_init(); /* load encryption & hash algorithms for SSL */         	
 	SSL_load_error_strings(); /* load the error strings for good error reporting */
@@ -80,9 +75,9 @@ int main(int argc, char **argv)
 	SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));
 
 	// Body
-    SSL_write(ssl, ubuf, u_len);
+    SSL_write(ssl, ubuf, strlen(ubuf));
 	SSL_write(ssl, newline, strlen(newline));
-    SSL_write(ssl, pbuf, p_len);
+    SSL_write(ssl, pbuf, strlen(pbuf));
 	SSL_write(ssl, newline, strlen(newline));
 	
 	int key_file = open(argv[3], O_RDONLY);
