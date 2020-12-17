@@ -7,12 +7,14 @@ int main(int argc, char **argv)
 	SSL *ssl;
 	const SSL_METHOD *meth;
 	BIO *sbio;
-	int err, res, sock, ilen;
+	int err, res, sock, ilen, message_len = 0;
 
 	char ibuf[512], ubuf[512], pbuf[512];
 	char *newline = "\r\n";
+	char len_buf[25];
 	char *content_length = "Content-Length:";
 	char *obuf = "GET /getcert HTTP/1.0\r\n";
+	struct stat buf;
 
     if (argc != 4) {
         fprintf(stderr, "Usage: ./getcert <username> <password> <path-to-public-key>\n");
@@ -25,6 +27,7 @@ int main(int argc, char **argv)
 
     strncpy(ubuf, argv[1], sizeof(ubuf)-1);
 	strncpy(pbuf, argv[2], sizeof(pbuf)-1);
+	message_len += (strlen(ubuf) + strlen(pbuf));
 	
 	SSL_library_init(); /* load encryption & hash algorithms for SSL */         	
 	SSL_load_error_strings(); /* load the error strings for good error reporting */
@@ -65,13 +68,22 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
-	printf("after connect\n");
+	// Open keyfile to get size
+	int key_file = open(argv[3], O_RDONLY);
+	if (key_file < 0) {
+		perror("Failed to open keyfile");
+		goto out;
+	}
+	fstat(key_file, &buf);
+	off_t size = buf.st_size;
+	message_len += size;
+	sprintf(len_buf, "%d", message_len);
 
     /* Send request */
 	// Headers
 	SSL_write(ssl, obuf, strlen(obuf));
 	SSL_write(ssl, content_length, strlen(content_length));
-	SSL_write(ssl, "200\r\n", strlen("200\r\n"));
+	SSL_write(ssl, len_buf, strlen(len_buf));
 	SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));
 
 	// Body
@@ -80,11 +92,7 @@ int main(int argc, char **argv)
     SSL_write(ssl, pbuf, strlen(pbuf));
 	SSL_write(ssl, newline, strlen(newline));
 	
-	int key_file = open(argv[3], O_RDONLY);
-	if (key_file < 0) {
-		perror("Failed to open keyfile");
-		goto out;
-	}
+	
 	while ((res = read(key_file, ibuf, sizeof(ibuf))) > 0) {
 		SSL_write(ssl, ibuf, res);
 	}
