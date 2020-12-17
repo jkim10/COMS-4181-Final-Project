@@ -19,6 +19,32 @@ char *get_ssl_err(SSL *ssl, int err)
 	return NULL;
 }
 
+int get_sock(int port)
+{
+	int sock;
+	struct sockaddr_in sin;
+	struct hostent *he;
+
+	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (sock < 0) {
+		perror("socket");
+		return -1;
+	}
+
+	bzero(&sin, sizeof sin);
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons(port);
+
+	he = gethostbyname("localhost");
+	memcpy(&sin.sin_addr, (struct in_addr *)he->h_addr, he->h_length);
+	if (connect(sock, (struct sockaddr *)&sin, sizeof sin) < 0) {
+		perror("connect");
+		return -1;
+	}
+
+	return sock;
+}
+
 int get_status_code(SSL *ssl, char *ibuf)
 {
     int err;

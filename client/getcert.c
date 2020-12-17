@@ -7,20 +7,12 @@ int main(int argc, char **argv)
 	SSL *ssl;
 	const SSL_METHOD *meth;
 	BIO *sbio;
-	int err, res;
+	int err, res, sock, ilen;
 
-	int ilen;
-	char ibuf[512];
-    char ubuf[512];
-    char pbuf[512];
-	char *newline = "\n";
+	char ibuf[512], ubuf[512], pbuf[512];
+	char *newline = "\r\n";
 	char *content_length = "Content-Length:";
-	int u_len, p_len;
-	char *obuf = "GET /getcert HTTP/1.0\n";
-
-	struct sockaddr_in sin;
-	int sock;
-	struct hostent *he;
+	char *obuf = "GET /getcert HTTP/1.0\r\n";
 
     if (argc != 4) {
         fprintf(stderr, "Usage: ./getcert <username> <password> <path-to-public-key>\n");
@@ -31,12 +23,8 @@ int main(int argc, char **argv)
 
 	//TODO: check if username or password contain a newline. this is illegal
 
-    strncpy(ubuf, argv[1], sizeof(ubuf)-2);
-	u_len = strlen(ubuf) + 1;
-	ubuf[u_len - 1] = '\n';
-    strncpy(pbuf, argv[2], sizeof(pbuf)-2);
-	p_len = strlen(pbuf) + 1;
-	pbuf[p_len - 1] = '\n';
+    strncpy(ubuf, argv[1], sizeof(ubuf)-1);
+	strncpy(pbuf, argv[2], sizeof(pbuf)-1);
 	
 	SSL_library_init(); /* load encryption & hash algorithms for SSL */         	
 	SSL_load_error_strings(); /* load the error strings for good error reporting */
@@ -59,23 +47,11 @@ int main(int argc, char **argv)
 	// 	exit(1);
 	// }
 
-	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (sock < 0) {
-		perror("socket");
+	sock = get_sock(8080);
+	if (sock == -1) {
+		fprintf(stderr, "Could not create socket\n");
 		SSL_CTX_free(ctx);
 		return 1;
-	}
-
-	bzero(&sin, sizeof sin);
-	sin.sin_family = AF_INET;
-	//sin.sin_port = htons(443);
-	sin.sin_port = htons(8080);
-
-	he = gethostbyname("localhost");
-	memcpy(&sin.sin_addr, (struct in_addr *)he->h_addr, he->h_length);
-	if (connect(sock, (struct sockaddr *)&sin, sizeof sin) < 0) {
-		perror("connect");
-		goto out;
 	}
 
 	sbio=BIO_new(BIO_s_socket());
@@ -89,17 +65,19 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
+	printf("after connect\n");
+
     /* Send request */
 	// Headers
 	SSL_write(ssl, obuf, strlen(obuf));
 	SSL_write(ssl, content_length, strlen(content_length));
-	SSL_write(ssl, "100", strlen("100"));
+	SSL_write(ssl, "200\r\n", strlen("200\r\n"));
 	SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));
 
 	// Body
-    SSL_write(ssl, ubuf, u_len);
+    SSL_write(ssl, ubuf, strlen(ubuf));
 	SSL_write(ssl, newline, strlen(newline));
-    SSL_write(ssl, pbuf, p_len);
+    SSL_write(ssl, pbuf, strlen(pbuf));
 	SSL_write(ssl, newline, strlen(newline));
 	
 	int key_file = open(argv[3], O_RDONLY);
@@ -116,8 +94,10 @@ int main(int argc, char **argv)
 
 	/* Parse response */
 	int response_code = get_status_code(ssl, ibuf);
-	printf("response code = %d\n", response_code);
-	// there are more specific values if we want to return nicer error messages...
+	if (response_code == BAD_RESPONSE)
+		printf("bad response, code = %d\n", response_code);
+	else if (response_code == SSL_ERROR)
+		printf("SSL error, response code = %d\n", response_code);
 	if (response_code != 200)
 		goto out;
 
@@ -129,8 +109,8 @@ int main(int argc, char **argv)
 	// Create destination file
 	char filename[256] = "./certificates/";
 	strncat(filename, ubuf, sizeof(filename) - strlen("./certificates"));
-	//printf("filename=%s\n", filename);
-	int dest = open(filename, O_CREAT | O_WRONLY); // if file already exists it will be overwritten
+	int dest = open(filename, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR); // if file already exists it will be overwritten
+	printf("dest=%d\n", dest);
 	if (dest < 0 ){
 		perror("Failed to create certificate file");
 		goto out;
