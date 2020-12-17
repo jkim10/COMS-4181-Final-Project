@@ -6,6 +6,6 @@ The duckduckgo.pem will be copied to the tree (act as the client cert received) 
 
 2. Go into the tree and call ./bin/sendmsg_server
 
-The client cert will be put into tmp to assess validness. The encryption cert will be extract to the current place. 
+The client cert will be put into tmp to assess validness. The cert for encryption will be extracted to the current place. The message will be uploaded to users/[recipient]/messages/
 
 3. make clean TREE=[TREE NAME] to restore

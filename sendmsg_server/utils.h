@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include <dirent.h>
+#include <algorithm>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -19,12 +20,10 @@ string ReadFiletoString(const char *filename);
 
 void WriteStringtoFile(string file, string filename);
 
-bool isValidCert(string filename);
-
-bool isValidRecipient(string recipient);
-
-string ReturnCert(string recipient);
-
 string GetCert(string recipient);
 
 bool VerifyCert(string client_cert);
+
+void RemoveFile(string filename);
+
+void UploadMessage(string message, string recipient);
