@@ -18,3 +18,4 @@
 char *get_ssl_err(SSL *ssl, int err);
 int get_status_code(SSL *ssl, char *ibuf);
 void skip_headers(SSL *ssl);
+int get_sock(int port);
