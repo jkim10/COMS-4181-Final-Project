@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <vector>
 
 #include <openssl/bio.h>
 #include <openssl/err.h>
@@ -27,3 +28,7 @@ bool VerifyCert(string client_cert);
 void UploadMessage(string message, string recipient);
 
 string GetMessage(string recipient);
+
+string ParseSendmsg(string content, vector<string> &recipients);
+
+string CertstoSend(string client_cert, vector<string> recipients);

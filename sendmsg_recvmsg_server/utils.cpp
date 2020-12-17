@@ -51,7 +51,7 @@ string ReturnCert(string recipient)
 	if (access(cert_path.c_str(), F_OK) == -1)
 	{
 		cerr << "Lack of suitable cert for " << recipient << endl;
-		return "";
+		return ".\n";
 	}
 	
 	return ReadFiletoString(cert_path.c_str());
@@ -62,7 +62,7 @@ string GetCert(string recipient)
 	if (isValidRecipient(recipient))
 		return ReturnCert(recipient);
 	else
-		return "";
+		return ".\n";
 }
 
 bool VerifyCert(string client_cert)
@@ -158,4 +158,40 @@ string GetMessage(string recipient)
 	closedir(dir);
 
 	return ReadFiletoString(message_path.c_str());
+}
+
+string ParseSendmsg(string content, vector<string> &recipients)
+{
+	if (content[content.length()-1] != '\n')
+	{
+		cerr << "Wrong format" << endl;
+		return "";
+	}
+
+	size_t found = content.find("-----END CERTIFICATE-----") + 25 + 1;
+	string client_cert = content.substr(0, found);
+	content = content.substr(found, content.length()-found);
+
+	while (content.length() > 0)
+	{
+		found = content.find('\n');
+		recipients.push_back(content.substr(0, found));
+		content = content.substr(found+1, content.length()-found-1);
+	}
+
+	return client_cert;
+}
+
+string CertstoSend(string client_cert, vector<string> recipients)
+{
+	string encrypt_certs;
+	if (VerifyCert(client_cert))
+	{
+		for (int i = 0; i < recipients.size(); ++i)
+		{
+			encrypt_certs += GetCert(recipients[i]);
+		}
+	}
+
+	return encrypt_certs;
 }
