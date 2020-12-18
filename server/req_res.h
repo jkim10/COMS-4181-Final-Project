@@ -3,6 +3,11 @@
 #include <iostream>
 #include <string>
 #include <regex>
+#include <vector>
+#include <unordered_map>
+#include <unistd.h>
+
+#include "utils.h"
 
 namespace my {
 
@@ -19,19 +24,51 @@ public:
 	PASS_AUTH_REQ(PASS_AUTH_REQ&&) = default;
 	PASS_AUTH_REQ() = default;
 	
-	std::string username;
-	std::string password;
-	std::string payload;
+	const std::string username;
+	const std::string password;
+	const std::string payload;
 	
 	std::string str() const {
 		return username + "\n" + password + "\n" + payload + "\n";
 	}
 	
 	bool verify() const {
-		// TODO: implement password checking!
-		return false;
+		try {
+			const std::string hash = PASS_AUTH_REQ::hpw_dict.at(username);
+			std::cerr << "Verifying: " << username << " " << password << " " << hash << std::endl;
+			return my::verify_password(password, hash);
+		} catch (const std::out_of_range& ex) {
+			return false;
+		}
 	}
+
+private:
+	static const constexpr char* HPW_FILE_PATH = "users.txt";
+	static std::unordered_map<std::string, std::string> hpw_dict;
 };
+
+auto PASS_AUTH_REQ::hpw_dict = []() -> std::unordered_map<std::string, std::string> {
+	static const std::string regex_str = R"(([a-z]+) (\$\d\$[!-~]{16}\$[!-~]{86})\r?\n?)";
+	static const std::regex reg(regex_str);
+	
+	const std::string raw_hpw_str = my::get_file_contents(PASS_AUTH_REQ::HPW_FILE_PATH);
+	
+	auto hpw_begin = 
+		std::sregex_iterator(raw_hpw_str.begin(), raw_hpw_str.end(), reg);
+	auto hpw_end = std::sregex_iterator();
+	std::unordered_map<std::string, std::string> hpw_dict;
+	
+	for (auto i = hpw_begin; i != hpw_end; ++i) {                                            
+		std::smatch sm = *i;
+		if (sm.size() != 3) {
+			std::cerr << "Hashed Passwords File Line Regex No Match: " << sm.str() << std::endl;
+			continue;
+		}
+		hpw_dict.insert({sm[1].str(), sm[2].str()});
+	}
+	
+	return hpw_dict;
+}();
 
 PASS_AUTH_REQ PASS_AUTH_REQ::parse_pass_auth_req(const std::string& raw_req_str) {
 	static const std::string regex_str = R"(^([a-z]+)\r?\n([!-~]+)\r?\n)";
@@ -40,8 +77,6 @@ PASS_AUTH_REQ PASS_AUTH_REQ::parse_pass_auth_req(const std::string& raw_req_str)
 	
 	if(!std::regex_search(raw_req_str, sm, reg) || sm.size() != 3) {
 		throw std::runtime_error(std::string("Pass Auth Req Regex No Match!\n"));
-		//std::cerr << "Pass Auth Req Regex No Match" << std::endl;
-		//return PASS_AUTH_REQ();
 	}
 	
 	return {sm[1].str(), sm[2].str(), sm.suffix()};

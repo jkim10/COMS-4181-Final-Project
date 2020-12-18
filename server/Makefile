@@ -6,9 +6,11 @@ LDLIBS=-lssl -lcrypto
 
 .PHONY: all clean clean_all clean_certs test mem_check
 
-all: server server-certificate.pem
+all: server server-certificate.pem users.txt
 	
-server: 
+server: utils.o
+
+utils.o: utils.cpp
 
 regex_test: 
 
@@ -21,8 +23,11 @@ server-public-key.pem: server-private-key.pem
 server-private-key.pem:
 	openssl ecparam -genkey -name prime256v1 -noout -out server-private-key.pem
 
+users.txt: 
+	cp users.init.txt users.txt
+
 clean:
-	rm -f server regex_test
+	rm -f server *.o regex_test users.txt
 
 clean_all: clean clean_certs
 
@@ -30,11 +35,13 @@ clean_certs:
 	rm -f server-*.pem
 
 test: server
-	printf "username\npassword\ncertificate" | curl -v --cacert server-certificate.pem --resolve duckduckgo.com:8080:127.0.0.1 --data-binary @- https://duckduckgo.com:8080/getcert && printf "\n\n"
-	printf "username\npassword\nnew_pass" | curl -v --cacert server-certificate.pem --resolve duckduckgo.com:8080:127.0.0.1 --data-binary @- https://duckduckgo.com:8080/changepw && printf "\n\n"
+	printf "addleness\nCardin_pwns\ncertificate" | curl -v --cacert server-certificate.pem --resolve duckduckgo.com:8080:127.0.0.1 --data-binary @- https://duckduckgo.com:8080/getcert && printf "\n\n"
+	printf "addleness\nCardin_pwns\nnew_pass" | curl -v --cacert server-certificate.pem --resolve duckduckgo.com:8080:127.0.0.1 --data-binary @- https://duckduckgo.com:8080/changepw && printf "\n\n"
+	printf "wusername\nCardin_pwns\ncertificate" | curl -v --cacert server-certificate.pem --resolve duckduckgo.com:8080:127.0.0.1 --data-binary @- https://duckduckgo.com:8080/getcert && printf "\n\n"
+	printf "addleness\nW_password\ncertificate" | curl -v --cacert server-certificate.pem --resolve duckduckgo.com:8080:127.0.0.1 --data-binary @- https://duckduckgo.com:8080/getcert && printf "\n\n"
 	printf "username\npassword\ncertificate" | curl -v --cacert server-certificate.pem --resolve duckduckgo.com:8080:127.0.0.1 --data-binary @- https://duckduckgo.com:8080/ && printf "\n\n"
-	printf "" | nc localhost 8080 && printf "\n\n"
+	printf "rand_str" | nc localhost 8080 && printf "\n\n"
 
 mem_check: CXXFLAGS+= -g
 mem_check: clean all server
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./server
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./server

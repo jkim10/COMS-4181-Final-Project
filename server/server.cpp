@@ -81,22 +81,32 @@ my::UniquePtr<BIO> accept_new_tcp_connection(BIO *accept_bio)
 
 PASS_AUTH_REQ pass_auth(BIO *bio, const std::string& req_str) {
 	const my::PASS_AUTH_REQ auth_req(req_str);
-	if (!auth_req.verify()) {
-		my::send_errors_and_throw(bio, 403, "incorrect password!");
+	try {
+		if (!auth_req.verify()) {
+			my::send_errors_and_throw(bio, 401, "incorrect username/password!");
+		}
+	} catch (const std::system_error& ex) {
+		my::send_errors_and_throw(bio, 500, "password verification error!\n");
 	}
 	return auth_req;
 }
 
 void getcert(BIO *bio, const std::string& req_str) {
-	// TODO: retrive and send cert
 	const PASS_AUTH_REQ auth_req = my::pass_auth(bio, req_str);
+	
+	// TODO: retrive and send cert
 	std::cout << "getcert: \n" << auth_req.str();
+	
+	my::send_http_response(bio, 200, "CERTIFICATE");
 }
 
 void changepw(BIO *bio, const std::string& req_str) {
-	// TODO: change pwd
 	const PASS_AUTH_REQ auth_req = my::pass_auth(bio, req_str);
+	
+	// TODO: change pwd
 	std::cout << "changepw: \n" << auth_req.str();
+	
+	my::send_http_response(bio, 200, "");
 }
 
 } // namespace my
@@ -134,9 +144,11 @@ int main()
 			| my::UniquePtr<BIO>(BIO_new_ssl(ctx.get(), 0))
 			;
 		try {
-			fprintf(stderr, "\n----------\nGot request:\n");
+			fprintf(stderr, "\n----------\nGot request: ");
 			my::HTTP_REQ request = my::receive_http_message(bio.get());
+			
 			//fprintf(stderr, "%s\n", request.str().c_str());
+			fprintf(stderr, "/%s\n", request.endpoint.c_str());
 			
 			if (request.method == "POST" && request.endpoint == "getcert") {
 				my::getcert(bio.get(), request.body);
@@ -150,10 +162,10 @@ int main()
 				my::send_errors_and_throw(bio.get(), 400, "Request Method/Endpoint Not Found!");
 			}
 			
-			my::send_http_response(bio.get(), 200, "okay cool\n");
+			//my::send_http_response(bio.get(), 200, "okay cool\n");
 		} catch (const std::exception& ex) {
 			fprintf(stderr, "Worker exited with exception:\n%s\n", ex.what());
 		}
 	}
-	printf("\nClean exit!\n");
+	fprintf(stderr, "\nClean exit!\n");
 }

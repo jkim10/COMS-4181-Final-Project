@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <regex>
+#include <vector>
 
 namespace my {
 
@@ -155,10 +156,11 @@ std::string HTTP_RES::get_status_msg(const int& status_code) {
 	switch(status_code){
 		case 200: return "OK";
 		case 400: return "Bad Request";
+		case 401: return "Unauthorized";
 		case 403: return "Forbidden";
 		case 404: return "Not Found";
 		case 500: return "Internal Server Error";
-		default: throw std::runtime_error(std::string("HTTP Response Status_Code Not Found!"));
+		default: throw std::runtime_error(std::string("HTTP Response Status_Code Not Found: ") + std::to_string(status_code));
 	}
 }
 
