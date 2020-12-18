@@ -10,7 +10,7 @@
 
 #include "ssl_common.h"
 #include "http_common.h"
-#include "req_res.h"
+#include "auth.h"
 
 namespace my {
 
@@ -80,7 +80,7 @@ my::UniquePtr<BIO> accept_new_tcp_connection(BIO *accept_bio)
 }
 
 PASS_AUTH_REQ pass_auth(BIO *bio, const std::string& req_str) {
-	const my::PASS_AUTH_REQ auth_req(req_str);
+	my::PASS_AUTH_REQ auth_req(req_str);
 	try {
 		if (!auth_req.verify()) {
 			my::send_errors_and_throw(bio, 401, "incorrect username/password!");
@@ -94,19 +94,22 @@ PASS_AUTH_REQ pass_auth(BIO *bio, const std::string& req_str) {
 void getcert(BIO *bio, const std::string& req_str) {
 	const PASS_AUTH_REQ auth_req = my::pass_auth(bio, req_str);
 	
-	// TODO: retrive and send cert
 	std::cout << "getcert: \n" << auth_req.str();
 	
-	my::send_http_response(bio, 200, "CERTIFICATE");
+	// TODO: retrive and send cert
+	
+	my::send_http_response(bio, 200, "NEW CERTIFICATE");
 }
 
 void changepw(BIO *bio, const std::string& req_str) {
-	const PASS_AUTH_REQ auth_req = my::pass_auth(bio, req_str);
+	PASS_AUTH_REQ auth_req = my::pass_auth(bio, req_str);
 	
-	// TODO: change pwd
-	std::cout << "changepw: \n" << auth_req.str();
+	std::cerr << "changepw: \n" << auth_req.str();
+	auth_req.changepw_preproccess();
 	
-	my::send_http_response(bio, 200, "");
+	// TODO: new cert generation
+	
+	my::send_http_response(bio, 200, "NEW CERTIFICATE");
 }
 
 } // namespace my

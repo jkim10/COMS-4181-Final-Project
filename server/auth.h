@@ -25,26 +25,48 @@ public:
 	PASS_AUTH_REQ() = default;
 	
 	const std::string username;
-	const std::string password;
-	const std::string payload;
+	std::string password;
+	std::string payload;
 	
 	std::string str() const {
 		return username + "\n" + password + "\n" + payload + "\n";
 	}
 	
-	bool verify() const {
+	bool verify() {
 		try {
 			const std::string hash = PASS_AUTH_REQ::hpw_dict.at(username);
 			std::cerr << "Verifying: " << username << " " << password << " " << hash << std::endl;
-			return my::verify_password(password, hash);
+			valid = my::verify_password(password, hash);
 		} catch (const std::out_of_range& ex) {
-			return false;
+			valid = false;
 		}
+		password.clear();
+		return valid;
+	}
+	
+	void changepw_preproccess() {
+		if (!valid) {
+			throw std::runtime_error(std::string("ChangePW Invoked on Invalid Auth Req!"));
+		}
+		static const std::string regex_str = R"(^(\w+)\r?\n)";
+		static const std::regex reg(regex_str);
+		std::smatch sm;
+		
+		if(!std::regex_search(payload, sm, reg) || sm.size() != 2) {
+			throw std::runtime_error(std::string("ChangePW Regex No Match!"));
+		}
+		PASS_AUTH_REQ::hpw_dict[username] = sm[1].str();
+		
+		// TODO: commit hpw_dict to disk
+		
+		payload = sm.suffix();
 	}
 
 private:
 	static const constexpr char* HPW_FILE_PATH = "users.txt";
 	static std::unordered_map<std::string, std::string> hpw_dict;
+	
+	bool valid = false;
 };
 
 std::unordered_map<std::string, std::string> PASS_AUTH_REQ::hpw_dict = []() -> std::unordered_map<std::string, std::string> {
