@@ -1,13 +1,10 @@
 #!/bin/bash
 
-if [ -d "$1" ]; then
-	echo "Tree Exists"
-	exit
-fi
+rm -rf mailbox
 
-mkdir "$1"
+mkdir mailbox
 
-cd "$1"
+cd mailbox
 mkdir bin users tmp
 
 input=("addleness" "analects" "annalistic" "anthropomorphologically" "blepharosphincterectomy" "corector" "durwaun" "dysphasia" "encampment" "endoscopic" "exilic" "forfend" "gorbellied" "gushiness" "muermo" "neckar" "outmate" "outroll" "overrich" "philosophicotheological" "pockwood" "polypose" "refluxed" "reinsure" "repine" "scerne" "starshine" "unauthoritativeness" "unminced" "unrosed" "untranquil" "urushinic" "vegetocarbonaceous" "wamara" "whaledom")

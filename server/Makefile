@@ -16,6 +16,9 @@ endif
 .PHONY: all clean clean_all clean_certs test mem_check
 
 all: server server-certificate.pem users.txt
+	./create-tree
+	# This is only for testing please remove once we have certs in mailbox working
+	cp encrypt.cert.pem ./mailbox/users/addleness/certs/encrypt.cert.pem
 	
 server: utils.o utils_server.o
 
@@ -39,6 +42,7 @@ users.txt:
 
 clean:
 	rm -f server *.o regex_test users.txt
+	rm -rf mailbox
 
 clean_all: clean clean_certs
 
