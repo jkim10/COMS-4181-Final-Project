@@ -13,11 +13,12 @@ int main(int argc, char **argv)
 	char *newline = "\r\n";
 	char len_buf[25];
 	char *content_length = "Content-Length:";
-	char *obuf = "GET /getcert HTTP/1.0\r\n";
+	char *obuf = "POST /getcert HTTP/1.0\r\n";
+	char csr_dest[256] = "./certificates/csr/";
 	struct stat buf;
 
     if (argc != 4) {
-        fprintf(stderr, "Usage: ./getcert <username> <password> <path-to-public-key>\n");
+        fprintf(stderr, "Usage: ./getcert <username> <password> <path-to-private-key>\n");
         exit(1);
     }
 
@@ -68,13 +69,32 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
-	// Open keyfile to get size
-	int key_file = open(argv[3], O_RDONLY);
-	if (key_file < 0) {
-		perror("Failed to open keyfile");
+	/* Call getcert-client.sh */
+	// Set up dest filename
+	strncat(csr_dest, argv[1], sizeof(csr_dest) - strlen(csr_dest));
+	strcat(csr_dest, ".csr.pem");
+	int pid = fork();
+	if (pid < 0) {
+		perror("fork failed");
+		goto out;
+	} else if (pid == 0) { // child
+		// ./getcert-client.sh <path_to_private_key> <csr_dest> <username>
+		// ./getcert-client.sh argv[3] <dest> argv[1]
+		execl("./bash", "./bash", "../cert_gen/getcert-client.sh", argv[3], csr_dest, 
+			argv[1], NULL);
+	} else { // parent
+		waitpid(pid, 0, 0);
+		// maybe check exit status
+	}
+
+	// Open csr
+	int csr = open(argv[4], O_RDONLY);
+	if (csr < 0) {
+		perror("Failed to open CSR file");
 		goto out;
 	}
-	fstat(key_file, &buf);
+	// Stat csr
+	fstat(csr, &buf);
 	off_t size = buf.st_size;
 	message_len += size;
 	sprintf(len_buf, "%d", message_len);
@@ -91,12 +111,12 @@ int main(int argc, char **argv)
 	SSL_write(ssl, newline, strlen(newline));
     SSL_write(ssl, pbuf, strlen(pbuf));
 	SSL_write(ssl, newline, strlen(newline));
-	
-	
-	while ((res = read(key_file, ibuf, sizeof(ibuf))) > 0) {
+
+	// Send CSR
+	while ((res = read(csr, ibuf, sizeof(ibuf))) > 0) {
 		SSL_write(ssl, ibuf, res);
 	}
-	close(key_file);
+	close(csr);
 
 	// End of request
 
@@ -117,6 +137,7 @@ int main(int argc, char **argv)
 	// Create destination file
 	char filename[256] = "./certificates/";
 	strncat(filename, ubuf, sizeof(filename) - strlen("./certificates"));
+	strcat(filename, ".cert.pem");
 	int dest = open(filename, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR); // if file already exists it will be overwritten
 	printf("dest=%d\n", dest);
 	if (dest < 0 ){

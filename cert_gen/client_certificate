@@ -25,7 +25,7 @@ openssl rsa -in intermediate/private/$1.key.pem \
         -pubout > intermediate/public/$1.pub
 chown $1 intermediate/private/$1.key.pem
 chmod 400 intermediate/private/$1.key.pem
-chmod 644 intermeidate/public/$1.pub
+chmod 644 intermediate/public/$1.pub
 
 # Create a certificate
 # 1. Certificate-Signing Request (CSR)
