@@ -1,8 +1,17 @@
 CC=clang++
 CXX=clang++
-CXXFLAGS=-std=c++14 -Wall -I/usr/local/opt/openssl@1.1/include/
-LDFLAGS=-L/usr/local/opt/openssl@1.1/lib/
-LDLIBS=-lssl -lcrypto -lcrypt
+CXXFLAGS=-std=c++14 -Wall
+LDFLAGS=
+LDLIBS=-lssl -lcrypto
+
+OS=$(shell uname -s)
+ifeq ($(OS),Linux)
+	LDLIBS+= -lcrypt
+endif
+ifeq ($(OS),Darwin)
+	CXXFLAGS+=-I/usr/local/opt/openssl@1.1/include/
+	LDFLAGS+=-L/usr/local/opt/openssl@1.1/lib/
+endif
 
 .PHONY: all clean clean_all clean_certs test mem_check
 
