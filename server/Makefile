@@ -17,9 +17,11 @@ endif
 
 all: server server-certificate.pem users.txt
 	
-server: utils.o
+server: utils.o utils_server.o
 
 utils.o: utils.cpp
+ 
+utils_server.o: utils_server.cpp
 
 regex_test: 
 
