@@ -47,7 +47,7 @@ private:
 	static std::unordered_map<std::string, std::string> hpw_dict;
 };
 
-auto PASS_AUTH_REQ::hpw_dict = []() -> std::unordered_map<std::string, std::string> {
+std::unordered_map<std::string, std::string> PASS_AUTH_REQ::hpw_dict = []() -> std::unordered_map<std::string, std::string> {
 	static const std::string regex_str = R"(([a-z]+) (\$\d\$[!-~]{16}\$[!-~]{86})\r?\n?)";
 	static const std::regex reg(regex_str);
 	
