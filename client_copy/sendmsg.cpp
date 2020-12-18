@@ -1,14 +1,14 @@
 #include <iostream>
 #include <string>
 #include <bits/stdc++.h> 
-
+#include "utils.h"
 extern "C"
 {
 	#include "client_utils.h"
 }
 using namespace std;
 // Change to return vector of certificates
-int get_recip_certs(vector<string> recips){
+int get_recip_certs(vector<string> recips, int message_len){
 	SSL_CTX *ctx;
 	SSL *ssl;
 	const SSL_METHOD *meth;
@@ -18,8 +18,8 @@ int get_recip_certs(vector<string> recips){
 	int ilen;
 	char ibuf[1000];
 	string newline = "\n";
-	string content_length= "Content-Length:";
-	string cert_req = "PUT /sendmsg HTTP/1.1\r\n";
+	char *content_length = "Content-Length:";
+	string cert_req = "POST /sendmsg HTTP/1.0\r\n";
 	string end = "\r\n\r\n";
 
 	struct sockaddr_in sin;
@@ -71,14 +71,21 @@ int get_recip_certs(vector<string> recips){
     /* Send request */
 	// Headers
 	SSL_write(ssl, cert_req.c_str(), cert_req.length());
+	char len_buf[25];
+	SSL_write(ssl, content_length, strlen(content_length));
+	string cert = ReadFiletoString("./duckduckgo.pem");
+	message_len += cert.length();
+	sprintf(len_buf, "%d", message_len);
+	SSL_write(ssl, len_buf, strlen(len_buf));
+	SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));
 	// SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));
 	// Body
+	// TODO: Change to client cert param
+	SSL_write(ssl, cert.c_str(), cert.length());
 	for (string x : recips) {
 		SSL_write(ssl, x.c_str(), x.length());
 	    SSL_write(ssl, newline.c_str(), newline.length());
 	}
-	    
-	SSL_write(ssl, end.c_str(), end.length());
 	int response_code = get_status_code(ssl, ibuf);
 	printf("response code = %d\n", response_code);
 	// there are more specific values if we want to return nicer error messages...
@@ -113,10 +120,13 @@ int main(int argc, char **argv)
     }
 	
 	vector <string> recips;
+	int message_len = 0;
 	for(int i=1; i < argc; i++){
 		recips.push_back(argv[i]);
+		message_len += strlen(argv[i]);
+		message_len += 1;
 	}
-	get_recip_certs(recips);
+	get_recip_certs(recips,message_len);
 
 	vector <string> certs;
 }
