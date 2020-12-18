@@ -55,7 +55,7 @@ public:
 		if(!std::regex_search(payload, sm, reg) || sm.size() != 2) {
 			throw std::runtime_error(std::string("ChangePW Regex No Match!"));
 		}
-		PASS_AUTH_REQ::hpw_dict[username] = sm[1].str();
+		PASS_AUTH_REQ::hpw_dict[username] = hash_password(sm[1].str().c_str(), NULL);
 		
 		// TODO: commit hpw_dict to disk
 		

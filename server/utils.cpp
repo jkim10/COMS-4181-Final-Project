@@ -29,6 +29,10 @@ void set_file_contents(const char* filename, std::string contents) {
 	out.close();
 }
 
+char* hash_password(const char* password, const char* hash) {
+	return crypt(password, hash);
+}
+
 bool verify_password(const std::string& password, const std::string& hash) {
 	char* new_hash = crypt(password.c_str(), hash.c_str());
 	if (new_hash == NULL) {
