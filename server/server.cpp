@@ -11,6 +11,8 @@
 #include "ssl_common.h"
 #include "http_common.h"
 #include "auth.h"
+#include "utils_server.h"
+#include "utils.h"
 
 namespace my {
 
@@ -40,6 +42,7 @@ HTTP_REQ receive_http_message(BIO *bio)
 		if (const char *colon = strchr(line.c_str(), ':')) {
 			auto header_name = std::string(&line[0], colon);
 			if (header_name == "Content-Length") {
+				fprintf(stderr,"%s\n", colon+1);
 				content_length = std::stoul(colon+1);
 			}
 		}
@@ -163,12 +166,17 @@ int main()
 				my::changepw(bio.get(), request.body);
 			} else if (request.endpoint == "sendmsg") {
 				// TODO: sendmsg
-				//vector<string> recipients;
-            			//string client_cert = ParseSendmsg(request, recipients);
-            			//string encrypt_cert = CertstoSend(client_cert, recipients);
-            			//my::send_http_response(bio.get(), encrypt_cert);
+				vector<string> recipients;
+				fprintf(stderr, "%s\n", request.body.c_str());
+				string client_cert = ParseSendmsg(request.body, recipients);
+				string encrypt_cert = CertstoSend(client_cert, recipients);
+				my::send_http_response(bio.get(),200, encrypt_cert);
+			} else if (request.endpoint == "upload") {
+				// TODO: Takes in a recipient with an encrypted message
+				// Header: POST /upload HTTP/1.1\r\n
+				//		   Content:Length: <length>
+				// Format of Body: @username@<encrypted message>
 			} else if (request.endpoint == "recvmsg") {
-				// TODO: recvmsg
 			} else {
 				my::send_errors_and_throw(bio.get(), 400, "Request Method/Endpoint Not Found!");
 			}
