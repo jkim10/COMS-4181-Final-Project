@@ -105,7 +105,11 @@ void changepw(BIO *bio, const std::string& req_str) {
 	PASS_AUTH_REQ auth_req = my::pass_auth(bio, req_str);
 	
 	std::cerr << "changepw: \n" << auth_req.str();
-	auth_req.changepw_preproccess();
+	try {
+		auth_req.changepw_preproccess();
+	} catch (const std::exception& ex) {
+		my::send_errors_and_throw(bio, 400, "changepw processing error!\n");
+	}
 	
 	// TODO: new cert generation
 	
