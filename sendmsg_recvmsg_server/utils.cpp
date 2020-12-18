@@ -92,6 +92,22 @@ void NamePlusOne(char filename[])
 	}
 }
 
+void NameMinusOne(char filename[])
+{
+	for (int i = strlen(filename)-1; i >= 0; --i)
+	{
+		if (filename[i] > '0')
+		{
+			filename[i] -= 1;
+			break;
+		}
+		else
+		{
+			filename[i] = '9';
+		}
+	}
+}
+
 void UploadMessage(string message, string recipient)
 {
 	string user_path = "./users/" + recipient + "/messages";
@@ -147,15 +163,47 @@ string GetMessage(string recipient)
 		cerr << "Cannot get messages" << endl;
 		return "";
 	}
-	
-	string message_path = user_path + "/00001";
+
+	char last_file[] = "00000";
+	struct dirent* entry;
+	while ((entry = readdir(dir)) != NULL)
+	{
+		if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
+		{
+			if (strlen(entry->d_name) == 5 && isNumeric(entry->d_name))
+			{
+				if (strcmp(entry->d_name, last_file) > 0)
+				{
+					strcpy(last_file, entry->d_name);
+				}
+			}
+			else
+			{
+				cerr << "Invalid messges contained" << endl;
+				return "";
+			}
+		}
+	}
+	closedir(dir);
+
+	// rename all files
+	char filename[] = "00001";
+	while (strcmp(filename, last_file) <= 0)
+	{
+		string oldname = filename;
+		NameMinusOne(filename);
+		string newname = filename;
+		rename((user_path + "/" + oldname).c_str(), (user_path + "/" + newname).c_str());
+		NamePlusOne(filename);
+		NamePlusOne(filename);
+	}
+
+	string message_path = user_path + "/00000";
 	if (access(message_path.c_str(), F_OK) == -1)
 	{
 		cerr << "No new messages" << endl;
 		return "";
 	}
-
-	closedir(dir);
 
 	return ReadFiletoString(message_path.c_str());
 }
