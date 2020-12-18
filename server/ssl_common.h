@@ -1,3 +1,5 @@
+#pragma once
+
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
@@ -59,6 +61,23 @@ public:
     my::StringBIO bio;
     ERR_print_errors(bio.bio());
     throw std::runtime_error(std::string(message) + "\n" + std::move(bio).str());
+}
+
+[[noreturn]] void send_errors_and_throw(BIO *bio, int status_code, const std::string& msg);
+
+std::string receive_some_data(BIO *bio)
+{
+	char buffer[1024];
+	int len = BIO_read(bio, buffer, sizeof(buffer));
+	if (len < 0) {
+		my::print_errors_and_throw("error in BIO_read");
+	} else if (len > 0) {
+		return std::string(buffer, len);
+	} else if (BIO_should_retry(bio)) {
+		return receive_some_data(bio);
+	} else {
+		my::print_errors_and_throw("empty BIO_read");
+	}
 }
 
 }

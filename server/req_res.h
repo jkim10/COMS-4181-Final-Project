@@ -1,3 +1,5 @@
+#pragma once
+
 #include <iostream>
 #include <string>
 #include <regex>
@@ -22,12 +24,12 @@ public:
 	std::string payload;
 	
 	std::string str() const {
-		return username + "\n" + password + "\n" + payload;
+		return username + "\n" + password + "\n" + payload + "\n";
 	}
 	
 	bool verify() const {
 		// TODO: implement password checking!
-		return true;
+		return false;
 	}
 };
 

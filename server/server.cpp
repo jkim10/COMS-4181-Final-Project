@@ -14,21 +14,6 @@
 
 namespace my {
 
-std::string receive_some_data(BIO *bio)
-{
-	char buffer[1024];
-	int len = BIO_read(bio, buffer, sizeof(buffer));
-	if (len < 0) {
-		my::print_errors_and_throw("error in BIO_read");
-	} else if (len > 0) {
-		return std::string(buffer, len);
-	} else if (BIO_should_retry(bio)) {
-		return receive_some_data(bio);
-	} else {
-		my::print_errors_and_throw("empty BIO_read");
-	}
-}
-
 std::vector<std::string> split_headers(const std::string& text)
 {
 	std::vector<std::string> lines;
@@ -62,18 +47,28 @@ HTTP_REQ receive_http_message(BIO *bio)
 	while (body.size() < content_length) {
 		body += my::receive_some_data(bio);
 	}
-	return HTTP_REQ(headers + "\r\n" + body);
+	try {
+		return HTTP_REQ(headers + "\r\n" + body);
+	} catch (const std::exception& ex) {
+		fprintf(stderr, "%s\n", ex.what());
+		//fprintf(stderr, "%s\n", headers.c_str());
+		send_errors_and_throw(bio, 400, "request not understood!");
+	}
 }
 
-void send_http_response(BIO *bio, const std::string& body)
+void send_http_response(BIO *bio, int status_code, const std::string& msg)
 {
-	std::string response = "HTTP/1.1 200 OK\r\n";
-	response += "Content-Length: " + std::to_string(body.size()) + "\r\n";
-	response += "\r\n";
+	const HTTP_RES res(status_code, msg);
+	std::string str_res = res.str();
 
-	BIO_write(bio, response.data(), response.size());
-	BIO_write(bio, body.data(), body.size());
+	BIO_write(bio, str_res.data(), str_res.size());
 	BIO_flush(bio);
+}
+
+[[noreturn]] void send_errors_and_throw(BIO *bio, int status_code, const std::string& msg)
+{
+    send_http_response(bio, status_code, msg);
+    throw std::runtime_error(std::string(msg) + "\n");
 }
 
 my::UniquePtr<BIO> accept_new_tcp_connection(BIO *accept_bio)
@@ -84,13 +79,23 @@ my::UniquePtr<BIO> accept_new_tcp_connection(BIO *accept_bio)
 	return my::UniquePtr<BIO>(BIO_pop(accept_bio));
 }
 
-void getcert(const PASS_AUTH_REQ auth_req) {
+PASS_AUTH_REQ pass_auth(BIO *bio, const std::string& req_str) {
+	const my::PASS_AUTH_REQ auth_req(req_str);
+	if (!auth_req.verify()) {
+		my::send_errors_and_throw(bio, 403, "incorrect password!");
+	}
+	return auth_req;
+}
+
+void getcert(BIO *bio, const std::string& req_str) {
 	// TODO: retrive and send cert
+	const PASS_AUTH_REQ auth_req = my::pass_auth(bio, req_str);
 	std::cout << "getcert: \n" << auth_req.str();
 }
 
-void changepw(const PASS_AUTH_REQ auth_req) {
+void changepw(BIO *bio, const std::string& req_str) {
 	// TODO: change pwd
+	const PASS_AUTH_REQ auth_req = my::pass_auth(bio, req_str);
 	std::cout << "changepw: \n" << auth_req.str();
 }
 
@@ -129,32 +134,25 @@ int main()
 			| my::UniquePtr<BIO>(BIO_new_ssl(ctx.get(), 0))
 			;
 		try {
+			fprintf(stderr, "\n----------\nGot request:\n");
 			my::HTTP_REQ request = my::receive_http_message(bio.get());
-			printf("Got request:\n");
-			printf("%s\n", request.str().c_str());
+			//fprintf(stderr, "%s\n", request.str().c_str());
 			
-			if (request.method == "POST" && (request.endpoint == "getcert" || request.endpoint == "changepw")) {
-				my::PASS_AUTH_REQ auth_req(request.body);
-				if (!auth_req.verify()) {
-					my::send_http_response(bio.get(), "incorrect password!\n");
-					my::print_errors_and_throw("incorrect password!");
-				}
-				if (request.endpoint == "getcert") {
-					my::getcert(auth_req);
-				} else if (request.endpoint == "changepw") {
-					my::changepw(auth_req);
-				} else {
-					my::print_errors_and_throw("code not supposed to reach here...");
-				}
+			if (request.method == "POST" && request.endpoint == "getcert") {
+				my::getcert(bio.get(), request.body);
 			} else if (request.method == "POST" && request.endpoint == "changepw") {
-				
+				my::changepw(bio.get(), request.body);
+			} else if (request.endpoint == "sendmsg") {
+				// TODO: sendmsg
+			} else if (request.endpoint == "recvmsg") {
+				// TODO: recvmsg
 			} else {
-				std::cerr << "Request Method/Endpoint Not Found!\n";
+				my::send_errors_and_throw(bio.get(), 400, "Request Method/Endpoint Not Found!");
 			}
 			
-			my::send_http_response(bio.get(), "okay cool\n");
+			my::send_http_response(bio.get(), 200, "okay cool\n");
 		} catch (const std::exception& ex) {
-			printf("Worker exited with exception:\n%s\n", ex.what());
+			fprintf(stderr, "Worker exited with exception:\n%s\n", ex.what());
 		}
 	}
 	printf("\nClean exit!\n");
