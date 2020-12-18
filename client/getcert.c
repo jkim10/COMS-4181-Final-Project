@@ -7,7 +7,7 @@ int main(int argc, char **argv)
 	SSL *ssl;
 	const SSL_METHOD *meth;
 	BIO *sbio;
-	int err, res, sock, ilen, message_len = 0;
+	int err, res, sock, ilen, status, message_len = 0;
 
 	char ibuf[512], ubuf[512], pbuf[512];
 	char *newline = "\r\n";
@@ -73,6 +73,7 @@ int main(int argc, char **argv)
 	// Set up dest filename
 	strncat(csr_dest, argv[1], sizeof(csr_dest) - strlen(csr_dest));
 	strcat(csr_dest, ".csr.pem");
+	printf("dest=%s\n", csr_dest);
 	int pid = fork();
 	if (pid < 0) {
 		perror("fork failed");
@@ -80,15 +81,18 @@ int main(int argc, char **argv)
 	} else if (pid == 0) { // child
 		// ./getcert-client.sh <path_to_private_key> <csr_dest> <username>
 		// ./getcert-client.sh argv[3] <dest> argv[1]
-		execl("./bash", "./bash", "../cert_gen/getcert-client.sh", argv[3], csr_dest, 
-			argv[1], NULL);
+		execl("/bin/sh", "sh", "../cert_gen/getcert-client.sh", argv[3], csr_dest, 
+			argv[1], (char *) NULL);
+		printf("execl failed\n");
 	} else { // parent
-		waitpid(pid, 0, 0);
-		// maybe check exit status
+		waitpid(pid, &status, 0); // TODO: check return val
+		if(WEXITSTATUS(status) == 1)
+			goto out;
+		
 	}
 
 	// Open csr
-	int csr = open(argv[4], O_RDONLY);
+	int csr = open(csr_dest, O_RDONLY);
 	if (csr < 0) {
 		perror("Failed to open CSR file");
 		goto out;

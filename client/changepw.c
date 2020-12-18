@@ -1,17 +1,3 @@
-#include <stdio.h>
-#include <strings.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <unistd.h>
-
-#include <openssl/ssl.h>
-#include <openssl/bio.h>
-#include <openssl/err.h>
-
 #include "client_utils.h"
 
 int main(int argc, char **argv)

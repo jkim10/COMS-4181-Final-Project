@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ### Params: <path_to_private_key> <csr_dest>
 
 if [ $# -ne 3 ]; then
@@ -6,14 +8,12 @@ if [ $# -ne 3 ]; then
 fi
 
 # Generate config file
-./generate_config csr_config.cnf ../client/certificates $3 usr
+#./generate_config csr_config.cnf ../client/certificates $3 usr
+./generate_config csr_config.cnf ./certificates $3 usr
 
 # Create CSR from client's private key
 openssl req -config csr_config.cnf \
         -key $1 \
-        -new -sha256 -out ../client/$2
-
-echo ../client/$2
-
+        -new -sha256 -out $2
 
 exit 0
