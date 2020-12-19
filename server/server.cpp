@@ -194,7 +194,6 @@ int main()
 			} else if (request.endpoint == "sendmsg") {
 				// TODO: sendmsg
 				vector<string> recipients;
-				fprintf(stderr, "%s\n", request.body.c_str());
 				string client_cert = ParseSendmsg(request.body, recipients);
 				string encrypt_cert = CertstoSend(client_cert, recipients);
 				my::send_http_response(bio.get(), 200, encrypt_cert);
