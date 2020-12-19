@@ -94,7 +94,7 @@ string get_encrypted_message(string recip, string cert){
 	SSL_write(ssl, cert.c_str(), cert.length());
 
 	int response_code = get_status_code(ssl, ibuf);
-	printf("response code = %d\n", response_code);
+	printf("Received encrypted message!\n");
 	// there are more specific values if we want to return nicer error messages...
 	if (response_code != 200)
 		goto out;
@@ -147,7 +147,7 @@ string decrypt(string cert, string message){
 
     BIO_reset(tbio);
 
-	key = BIO_new_file("duckduckgo-private-key.pem","r");
+	key = BIO_new_file("client.key.pem","r");
     rkey = PEM_read_bio_PrivateKey(key, NULL, 0, NULL);
 
     if (!rcert || !rkey)
@@ -169,10 +169,8 @@ string decrypt(string cert, string message){
     out = BIO_new_fp(tmp,BIO_CLOSE);
     if (!out)
         goto err;
-
     /* Decrypt S/MIME message */
     if (!CMS_decrypt(cms, rkey, rcert, NULL, out, 0)){
-		fprintf(stderr,"error code: %d\n", ERR_get_error());
 	    goto err;
 	}
 	

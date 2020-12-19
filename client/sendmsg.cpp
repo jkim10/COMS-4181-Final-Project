@@ -97,7 +97,7 @@ string get_recip_certs(vector<string> recips, int message_len, string cert_path)
 
 	/* Get Response */
 	int response_code = get_status_code(ssl, ibuf);
-	printf("response code = %d\n", response_code);
+	printf("Successfully received recipient certificates!\n");
 	// there are more specific values if we want to return nicer error messages...
 	if (response_code != 200)
 		goto out;
@@ -171,7 +171,6 @@ string encrypt(string cert, string message){
 
     if (!in)
         goto err;
-
     /* encrypt content */
     cms = CMS_encrypt(recips, in, EVP_des_ede3_cbc(), flags);
 
@@ -290,7 +289,7 @@ string send_encrypted_message(string recip, string encrypted){
 
 	/* Get Response and return body*/
 	int response_code = get_status_code(ssl, ibuf);
-	printf("response code = %d\n", response_code);
+	printf("Sent encrypted message to %s\n", recip.c_str());
 	// there are more specific values if we want to return nicer error messages...
 	if (response_code != 200)
 		goto out;
@@ -337,6 +336,7 @@ int main(int argc, char **argv)
 	// Get Message from StdIn
 	while(getline(cin,line)){
 		message += line;
+		message += '\n';
 	}
 
 	// Make Request to Server for recipient certs
@@ -346,13 +346,12 @@ int main(int argc, char **argv)
 	if(cert_resp.length() > 2){ // At least one valid cert
 		std::stringstream ss(cert_resp);
 		std::string line;
-
 		// For each recip, send encrypted message 
 		for(string recip : recips){
 			string cert="";
 			while (std::getline(ss, line)) {
-				if(line == ".\n"){
-					fprintf(stderr,"%s\n did not have a valid cert", recip.c_str());
+				if(line == "."){
+					fprintf(stderr,"%s did not have a valid cert\n", recip.c_str());
 					break;
 				} else if (line == "-----END CERTIFICATE-----"){
 					cert += line;
@@ -366,7 +365,6 @@ int main(int argc, char **argv)
 			//Encrypt to Certificate and sign
 			if(cert.length() > 0){
 				string encrypted = encrypt(cert,message);
-				fprintf(stderr,"%s's cert: %s\n",recip.c_str(),encrypted.c_str());
 				// Send Request (Note if we want all to fail on one failure, then we do outside)
 				string resp = send_encrypted_message(recip, encrypted);
 			}
