@@ -155,6 +155,15 @@ void UploadMessage(string message, string recipient)
 	WriteStringtoFile(message, file_path);
 }
 
+void ParseMessages(string content)
+{
+	size_t user_start = 1;
+	size_t user_end = content.find("@", user_start + 1);
+	string recipient = content.substr(user_start, user_end - user_start);
+	string message = content.substr(user_end + 1, content.length() - user_end - 1);
+	UploadMessage(message, recipient);
+}
+
 string GetMessage(string recipient)
 {
 	string user_path = "./mailbox/users/" + recipient + "/messages";

@@ -176,6 +176,8 @@ int main()
 				// Header: POST /upload HTTP/1.1\r\n
 				//		   Content:Length: <length>
 				// Format of Body: @username@<encrypted message>
+				ParseMessages(request.body);
+				my::send_errors_and_throw(bio.get(), 200, "Message Uploaded");
 			} else if (request.endpoint == "recvmsg") {
 			} else {
 				my::send_errors_and_throw(bio.get(), 400, "Request Method/Endpoint Not Found!");

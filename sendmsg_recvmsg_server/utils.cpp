@@ -157,7 +157,7 @@ void UploadMessage(string message, string recipient)
 void ParseMessages(string content)
 {
 	size_t user_start = 1;
-	size_t user_end = content.find("@", pos=user_start);
+	size_t user_end = content.find("@", user_start);
 	string recipient = content.substr(user_start, user_end - user_start);
 	string message = content.substr(user_end + 1, content.length() - user_end - 1);
 	UploadMessage(message, recipient);
