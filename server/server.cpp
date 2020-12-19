@@ -184,6 +184,10 @@ int main()
 				my::changepw(bio.get(), request.body);
 			} else if (request.endpoint == "sendmsg") {
 				// TODO: sendmsg
+				//vector<string> recipients;
+            			//string client_cert = ParseSendmsg(request, recipients);
+            			//string encrypt_cert = CertstoSend(client_cert, recipients);
+            			//my::send_http_response(bio.get(), encrypt_cert);
 			} else if (request.endpoint == "recvmsg") {
 				// TODO: recvmsg
 			} else {

@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# Take command line arguments - there should be 1
+if [ $# -ne 3 ]; then
+    echo "Usage: ./server_certificate <website_name> <pass_in> <pass_out>"
+    exit 1
+fi
+
+# Verify that name is a FQDN: starts with www, contains a dot
+url=$1
+if [[ $url != "www."*"."* ]]; then
+    echo "URL must be fully-qualified domain name"
+    exit 1
+fi
+
+cd root_ca
+
+# Generate config file
+.././generate_config server_config.cnf . $1 server
+mv server_config.cnf ./intermediate
+
+# Create a key
+openssl genrsa -aes256 \
+        -out intermediate/private/$url.key.pem \
+        -passout pass:$3 2048
+chmod 400 intermediate/private/$url.key.pem
+
+#mkdir ./intermediate/csr
+
+# Create a certificate
+# 1. Certificate-Signing Request (CSR)
+openssl req -config intermediate/server_config.cnf \
+        -key intermediate/private/$url.key.pem \
+        -new -sha256 -out intermediate/csr/$url.csr.pem \
+        -passin pass:$2 -passout pass:$3
+
+echo "created csr"
+
+# 2. Use intermediate CA to sign CSR
+openssl ca -config intermediate/server_config.cnf \
+        -extensions server_cert -days 375 -notext -md sha256 \
+        -in intermediate/csr/$url.csr.pem \
+        -out intermediate/certs/$url.cert.pem \
+        -key $2 -passin pass:$2
+chmod 444 intermediate/certs/$url.cert.pem
+
+# Verify certificate
+openssl verify -CAfile intermediate/certs/ca-chain.cert.pem \
+        intermediate/certs/$url.cert.pem
