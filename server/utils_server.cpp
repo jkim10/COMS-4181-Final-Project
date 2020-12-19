@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "utils_server.h"
 
 string ReadFiletoString(const char *filename)
 {
@@ -35,7 +35,7 @@ bool isValidCert(string filename)
 
 bool isValidRecipient(string recipient)
 {
-	string user_path = "./users/" + recipient;
+	string user_path = "./mailbox/users/" + recipient;
 	if (access(user_path.c_str(), F_OK) == -1)
 	{
 		cerr << "Invalid recipient: " << recipient << endl;
@@ -51,7 +51,8 @@ bool isValidRecipient(string recipient)
 
 string ReturnCert(string recipient)
 {
-	string cert_path = "./users/" + recipient + "/certs/encrypt.cert.pem";
+	string cert_path = "./mailbox/users/" + recipient + "/certs/encrypt.cert.pem";
+	fprintf(stderr, "CERTPATH: %s\n", cert_path.c_str());
 	if (access(cert_path.c_str(), F_OK) == -1)
 	{
 		cerr << "Lack of suitable cert for " << recipient << endl;
@@ -71,8 +72,8 @@ string GetCert(string recipient)
 
 bool VerifyCert(string client_cert)
 {
-	WriteStringtoFile(client_cert, "./tmp/client.cert.pem");
-	return isValidCert("./tmp/client.cert.pem");
+	WriteStringtoFile(client_cert, "./mailbox/tmp/client.cert.pem");
+	return isValidCert("./mailbox/tmp/client.cert.pem");
 }
 
 bool isNumeric(const string &str)
@@ -114,7 +115,7 @@ void NameMinusOne(char filename[])
 
 void UploadMessage(string message, string recipient)
 {
-	string user_path = "./users/" + recipient + "/messages";
+	string user_path = "./mailbox/users/" + recipient + "/messages";
 	DIR *dir = opendir(user_path.c_str());
 	if (dir == NULL)
 	{
@@ -153,7 +154,7 @@ void UploadMessage(string message, string recipient)
 
 	NamePlusOne(last_file);
 
-	string file_path = "./users/" + recipient + "/messages/" + last_file;
+	string file_path = "./mailbox/users/" + recipient + "/messages/" + last_file;
 
 	WriteStringtoFile(message, file_path);
 }
@@ -169,7 +170,7 @@ void ParseMessages(string content)
 
 string GetMessage(string recipient)
 {
-	string user_path = "./users/" + recipient + "/messages";
+	string user_path = "./mailbox/users/" + recipient + "/messages";
 	DIR *dir = opendir(user_path.c_str());
 	if (dir == NULL)
 	{
@@ -223,7 +224,7 @@ string GetMessage(string recipient)
 
 string ParseSendmsg(string content, vector<string> &recipients)
 {
-	if (content[content.length()-1] != '\n')
+	if (content.back() != '\n')
 	{
 		cerr << "Wrong format" << endl;
 		return "";
@@ -232,7 +233,6 @@ string ParseSendmsg(string content, vector<string> &recipients)
 	size_t found = content.find("-----END CERTIFICATE-----") + 25 + 1;
 	string client_cert = content.substr(0, found);
 	content = content.substr(found, content.length()-found);
-
 	while (content.length() > 0)
 	{
 		found = content.find('\n');

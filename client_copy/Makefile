@@ -16,8 +16,10 @@ recvmsg: recvmsg.o client_utils.o
 
 recvmsg.o: recvmsg.c client_utils.h
 
-sendmsg: sendmsg.o client_utils.o
-	g++ $(CFLAGS) sendmsg.o client_utils.o -o sendmsg  $(LDFLAGS)
+sendmsg: sendmsg.o client_utils.o utils.o
+	g++ $(CFLAGS) sendmsg.o client_utils.o utils.o -o sendmsg  $(LDFLAGS)
+
+utils.o: utils.cpp utils.h
 
 sendmsg.o: sendmsg.cpp client_utils.h
 

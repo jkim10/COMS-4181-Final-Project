@@ -24,11 +24,13 @@ bool isValidCert(string filename)
 	if (SSL_CTX_load_verify_locations(ctx, filename.c_str(), nullptr) != 1)
 	{
 		cout << "Invalid cert" << endl;
+		SSL_CTX_free(ctx);
         return false;
 	}
     else
     {
     	cerr << "Cert is valid" << endl;
+		SSL_CTX_free(ctx);
     	return true;
     }
 }
@@ -39,14 +41,10 @@ bool isValidRecipient(string recipient)
 	if (access(user_path.c_str(), F_OK) == -1)
 	{
 		cerr << "Invalid recipient: " << recipient << endl;
-		SSL_CTX_free(ctx);
 		return false;
 	}
 	else
-	{
-		SSL_CTX_free(ctx);
 		return true;
-	}
 }
 
 string ReturnCert(string recipient)
@@ -156,15 +154,6 @@ void UploadMessage(string message, string recipient)
 	string file_path = "./users/" + recipient + "/messages/" + last_file;
 
 	WriteStringtoFile(message, file_path);
-}
-
-void ParseMessages(string content)
-{
-	size_t user_start = 1;
-	size_t user_end = content.find("@", user_start + 1);
-	string recipient = content.substr(user_start, user_end - user_start);
-	string message = content.substr(user_end + 1, content.length() - user_end - 1);
-	UploadMessage(message, recipient);
 }
 
 string GetMessage(string recipient)

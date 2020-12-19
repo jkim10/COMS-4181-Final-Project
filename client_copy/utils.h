@@ -27,8 +27,6 @@ bool VerifyCert(string client_cert);
 
 void UploadMessage(string message, string recipient);
 
-void ParseMessages(string content);
-
 string GetMessage(string recipient);
 
 string ParseSendmsg(string content, vector<string> &recipients);
