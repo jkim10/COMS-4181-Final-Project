@@ -15,7 +15,7 @@ extern "C"
 	#include "client_utils.h"
 }
 using namespace std;
-string get_recip_certs(vector<string> recips, int message_len){
+string get_recip_certs(vector<string> recips, int message_len, string cert_path){
 	SSL_CTX *ctx;
 	SSL *ssl;
 	const SSL_METHOD *meth;
@@ -25,9 +25,12 @@ string get_recip_certs(vector<string> recips, int message_len){
 	int ilen;
 	char ibuf[1000];
 	string newline = "\n";
-	char *content_length = "Content-Length:";
+	string content_length = "Content-Length:";
 	string cert_req = "POST /sendmsg HTTP/1.0\r\n";
 	string end = "\r\n\r\n";
+
+
+	/* Start connection to Server*/
 
 	struct sockaddr_in sin;
 	int sock;
@@ -78,21 +81,21 @@ string get_recip_certs(vector<string> recips, int message_len){
     /* Send request */
 	// Headers
 	SSL_write(ssl, cert_req.c_str(), cert_req.length());
-	char len_buf[25];
-	SSL_write(ssl, content_length, strlen(content_length));
+	SSL_write(ssl, content_length.c_str(), content_length.length());
+	// TODO: when we have certificates setup, uncomment this and replace duckduckgo
+	// string cert = ReadFiletoString(cert_path)
 	string cert = ReadFiletoString("./duckduckgo.pem");
 	message_len += cert.length();
-	sprintf(len_buf, "%d", message_len);
-	SSL_write(ssl, len_buf, strlen(len_buf));
+	SSL_write(ssl, to_string(message_len).c_str(), to_string(message_len).length());
 	SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));
-	// SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));
 	// Body
-	// TODO: Change to client cert param
 	SSL_write(ssl, cert.c_str(), cert.length());
 	for (string x : recips) {
 		SSL_write(ssl, x.c_str(), x.length());
 	    SSL_write(ssl, newline.c_str(), newline.length());
 	}
+
+	/* Get Response */
 	int response_code = get_status_code(ssl, ibuf);
 	printf("response code = %d\n", response_code);
 	// there are more specific values if we want to return nicer error messages...
@@ -217,11 +220,15 @@ string send_encrypted_message(string recip, string encrypted){
 	int ilen;
 	char ibuf[1000];
 	string newline = "\n";
-	char *content_length = "Content-Length:";
+	string content_length = "Content-Length:";
 	string cert_req = "POST /upload HTTP/1.0\r\n";
 	string end = "\r\n\r\n";
 	int message_len = encrypted.length();
+	message_len += recip.length() + 2; // Recip + 2 "@" for parsing
 
+	/*
+	 Start Connection to Server
+	*/
 	struct sockaddr_in sin;
 	int sock;
 	struct hostent *he;
@@ -271,19 +278,17 @@ string send_encrypted_message(string recip, string encrypted){
     /* Send request */
 	// Headers
 	SSL_write(ssl, cert_req.c_str(), cert_req.length());
-	char len_buf[25];
-	SSL_write(ssl, content_length, strlen(content_length));
-	message_len += recip.length() + 2;
-	sprintf(len_buf, "%d", message_len);
-	SSL_write(ssl, len_buf, strlen(len_buf));
+	SSL_write(ssl, content_length.c_str(), content_length.length());
+	SSL_write(ssl, to_string(message_len).c_str(), to_string(message_len).length());
 	SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));
-	// SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));
 	// Body
-	// TODO: Change to client cert param
 	SSL_write(ssl, "@",1);
 	SSL_write(ssl,recip.c_str(),recip.length());
 	SSL_write(ssl, "@",1);
 	SSL_write(ssl, encrypted.c_str(), encrypted.length());
+
+
+	/* Get Response and return body*/
 	int response_code = get_status_code(ssl, ibuf);
 	printf("response code = %d\n", response_code);
 	// there are more specific values if we want to return nicer error messages...
@@ -309,116 +314,46 @@ out:
 	return "";
 }
 
-string decrypt(string cert, string message){
-	BIO *in = NULL, *out = NULL, *tbio = NULL;
-    X509 *rcert = NULL;
-    EVP_PKEY *rkey = NULL;
-    CMS_ContentInfo *cms = NULL;
-    string decrypted = "";
-	FILE* tmp = tmpfile();
-	int c;
-
-    /*
-     * On OpenSSL 1.0.0 and later only:
-     * for streaming set CMS_STREAM
-     */
-    int flags = CMS_STREAM;
-
-    OpenSSL_add_all_algorithms();
-    ERR_load_crypto_strings();
-	fprintf(stderr,"%s\n",cert.c_str());
-    /* Read in recipient certificate */
-    tbio = BIO_new(BIO_s_mem());
-	BIO_puts(tbio, cert.c_str());
-
-    if (!tbio)
-        goto err;
-
-    rcert = PEM_read_bio_X509(tbio, NULL, 0, NULL);
-
-    BIO_reset(tbio);
-
-    rkey = PEM_read_bio_PrivateKey(tbio, NULL, 0, NULL);
-
-    if (!rcert)
-        goto err;
-
-    /* Open S/MIME message to decrypt */
-
-    in = BIO_new_file("smencr.txt", "r");
-
-    if (!in)
-        goto err;
-
-    /* Parse message */
-    cms = SMIME_read_CMS(in, NULL);
-
-    if (!cms)
-        goto err;
-
-    out = BIO_new_fp(tmp,BIO_CLOSE);
-    if (!out)
-        goto err;
-
-    /* Decrypt S/MIME message */
-    if (!CMS_decrypt(cms, rkey, rcert, NULL, out, 0))
-        goto err;
-
-	//Hacky way to read out a BIO
-	rewind(tmp);
-	while ((c = getc(tmp)) != EOF){
-		decrypted += c;
-	}
-
-
- err:
-
-    if (decrypted == "") {
-        fprintf(stderr, "Error Decrypting Data\n");
-        ERR_print_errors_fp(stderr);
-    }
-
-    CMS_ContentInfo_free(cms);
-    X509_free(rcert);
-    EVP_PKEY_free(rkey);
-    BIO_free(in);
-    BIO_free(out);
-    BIO_free(tbio);
-    return decrypted;
-}
-
-
-
 int main(int argc, char **argv)
 {
 	
     if (argc < 2) {
-        fprintf(stderr, "Usage: ./sendmsg <recipients>\n");
+        fprintf(stderr, "Usage: ./sendmsg <path/to/cert> <recipients>\n");
         exit(1);
     }
 	
+	// Read in Recipients from command line into vector
 	vector <string> recips;
 	int content_length = 0;
-	for(int i=1; i < argc; i++){
+	string cert_path = argv[1];
+	for(int i=2; i < argc; i++){
 		recips.push_back(argv[i]);
 		content_length += strlen(argv[i]);
 		content_length += 1;
 	}
 	string message;
 	string line;
+
+	// Get Message from StdIn
 	while(getline(cin,line)){
 		message += line;
 	}
 
-	string cert_resp = get_recip_certs(recips,content_length);
+	// Make Request to Server for recipient certs
+	string cert_resp = get_recip_certs(recips,content_length, cert_path);
+
+	// Upload Messages
 	if(cert_resp.length() > 2){ // At least one valid cert
 		std::stringstream ss(cert_resp);
 		std::string line;
+
+		// For each recip, send encrypted message 
 		for(string recip : recips){
-			string cert;
+			string cert="";
 			while (std::getline(ss, line)) {
 				if(line == ".\n"){
 					fprintf(stderr,"%s\n did not have a valid cert", recip.c_str());
+					break;
 				} else if (line == "-----END CERTIFICATE-----"){
 					cert += line;
 					cert.push_back('\n');
@@ -429,11 +364,12 @@ int main(int argc, char **argv)
 				}
 			}
 			//Encrypt to Certificate and sign
-			string encrypted = encrypt(cert,message);
-			fprintf(stderr,"%s's cert: %s\n",recip.c_str(),encrypted.c_str());
-			// Send Request (Note if we want all to fail on one failure, then we do outside)
-			string resp = send_encrypted_message(recip, encrypted);
-			decrypt(cert,encrypted);
+			if(cert.length() > 0){
+				string encrypted = encrypt(cert,message);
+				fprintf(stderr,"%s's cert: %s\n",recip.c_str(),encrypted.c_str());
+				// Send Request (Note if we want all to fail on one failure, then we do outside)
+				string resp = send_encrypted_message(recip, encrypted);
+			}
 		}
 	}
 
