@@ -340,7 +340,7 @@ string decrypt(string cert, string message){
 
     rkey = PEM_read_bio_PrivateKey(tbio, NULL, 0, NULL);
 
-    if (!rcert || !rkey)
+    if (!rcert)
         goto err;
 
     /* Open S/MIME message to decrypt */
