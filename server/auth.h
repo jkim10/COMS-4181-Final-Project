@@ -82,7 +82,14 @@ std::unordered_map<std::string, std::string> PASS_AUTH_REQ::hpw_dict = []() -> s
 	static const std::string regex_str = R"(([a-z]+) (\$\d\$[!-~]{16}\$[!-~]{86})\r?\n?)";
 	static const std::regex reg(regex_str);
 	
-	const std::string raw_hpw_str = my::get_file_contents(PASS_AUTH_REQ::HPW_FILE_PATH);
+	std::string raw_hpw_str;
+	try {
+		raw_hpw_str = my::get_file_contents(PASS_AUTH_REQ::HPW_FILE_PATH);
+	} catch (const std::system_error& ex) {
+		std::cerr << "Error reading HPW_FILE @ " << PASS_AUTH_REQ::HPW_FILE_PATH << std::endl;
+		std::cerr << ex.what() << std::endl;
+		exit(1);
+	}
 	
 	auto hpw_begin = 
 		std::sregex_iterator(raw_hpw_str.begin(), raw_hpw_str.end(), reg);

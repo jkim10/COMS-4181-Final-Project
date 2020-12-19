@@ -23,11 +23,12 @@ utils.o: utils.cpp
  
 utils_server.o: utils_server.cpp
 
-users.txt: 
-	cp ../scripts/users.init.txt users.txt
+hpw_file: 
+	mkdir -p serv_conf
+	cp ../scripts/users.init.txt serv_conf/users.txt
 
 mailbox:
-	./create-tree.sh
+	../scripts/create-tree.sh
 	# This is only for testing please remove once we have certs in mailbox working
 	cp encrypt.cert.pem ./mailbox/users/addleness/certs/encrypt.cert.pem
 
