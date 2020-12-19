@@ -253,11 +253,17 @@ string ParseSendmsg(string content, vector<string> &recipients)
 {
 	if (content.back() != '\n')
 	{
-		cerr << "Wrong format" << endl;
+		cerr << "Wrong format: need a new line at the end" << endl;
 		return "";
 	}
 
 	size_t found = content.find("-----END CERTIFICATE-----") + 25 + 1;
+	if (found > content.length())
+	{
+		cerr << "Invalid certificate: lack of end of certificate" << endl;
+		return "";
+	}
+
 	string client_cert = content.substr(0, found);
 	content = content.substr(found, content.length()-found);
 	while (content.length() > 0)
@@ -272,7 +278,7 @@ string ParseSendmsg(string content, vector<string> &recipients)
 
 string CertstoSend(string client_cert, vector<string> recipients)
 {
-	string encrypt_certs;
+	string encrypt_certs = "";
 	if (VerifyCert(client_cert))
 	{
 		for (int i = 0; i < recipients.size(); ++i)
