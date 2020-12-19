@@ -207,7 +207,11 @@ int main()
 				my::send_errors_and_throw(bio.get(), 200, "Message Uploaded");
 			} else if (request.endpoint == "recvmsg") {
 			} else {
-				my::send_errors_and_throw(bio.get(), 400, "Request Method/Endpoint Not Found!");
+				string message = ParseRecvmsg(request.body);
+				if (message == "")
+					my::send_errors_and_throw(bio.get(), 400, "Request Method/Endpoint Not Found!");
+				else
+					my::send_errors_and_throw(bio.get(), 200, message);
 			}
 			
 			//my::send_http_response(bio.get(), 200, "okay cool\n");
