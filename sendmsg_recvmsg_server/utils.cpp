@@ -162,8 +162,30 @@ int UploadMessage(string message, string recipient)
 
 int ParseMessages(string content)
 {
+	if (content.length() < 3)
+	{
+		cerr << "Too short a body" << endl;
+		return 1;
+	}
+	if (content[0] != '@')
+	{
+		cerr << "Lack of start @" << endl;
+		return 1;
+	}
+
 	size_t user_start = 1;
 	size_t user_end = content.find("@", user_start + 1);
+	if (user_end >= content.length())
+	{
+		cerr << "Lack of end @" << endl;
+		return 1;
+	}
+	else if (user_end == content.length() - 1)
+	{
+		cerr << "Empty message" << endl;
+		return 1;
+	}
+
 	string recipient = content.substr(user_start, user_end - user_start);
 	string message = content.substr(user_end + 1, content.length() - user_end - 1);
 	return UploadMessage(message, recipient);
@@ -225,13 +247,19 @@ string GetMessage(string recipient)
 
 string ParseSendmsg(string content, vector<string> &recipients)
 {
-	if (content[content.length()-1] != '\n')
+	if (content.back() != '\n')
 	{
-		cerr << "Wrong format" << endl;
+		cerr << "Wrong format: need a new line at the end" << endl;
 		return "";
 	}
 
 	size_t found = content.find("-----END CERTIFICATE-----") + 25 + 1;
+	if (found > content.length())
+	{
+		cerr << "Invalid certificate: lack of end of certificate" << endl;
+		return "";
+	}
+
 	string client_cert = content.substr(0, found);
 	content = content.substr(found, content.length()-found);
 
@@ -247,7 +275,7 @@ string ParseSendmsg(string content, vector<string> &recipients)
 
 string CertstoSend(string client_cert, vector<string> recipients)
 {
-	string encrypt_certs;
+	string encrypt_certs = "";
 	if (VerifyCert(client_cert))
 	{
 		for (int i = 0; i < recipients.size(); ++i)
@@ -261,14 +289,39 @@ string CertstoSend(string client_cert, vector<string> recipients)
 
 string ParseRecvmsg(string content)
 {
+	string message = "";
+
+	if (content.length() < 4)
+	{
+		cerr << "Too short a body" << endl;
+		return "";
+	}
+	if (content[0] != '@')
+	{
+		cerr << "Lack of start @" << endl;
+		return "";
+	}
+
 	size_t user_start = 1;
 	size_t user_end = content.find("@", user_start + 1);
+	if (user_end >= content.length())
+	{
+		cerr << "Lack of end @" << endl;
+		return "";
+	}
+	else if (user_end == content.length() - 1)
+	{
+		cerr << "Lack of client certificate" << endl;
+		return "";
+	}
+
 	string recipient = content.substr(user_start, user_end - user_start);
 	string client_cert = content.substr(user_end + 1, content.length() - user_end - 1);
-	string message = "";
+
 	if (VerifyCert(client_cert))
 	{
 		message = GetMessage(recipient);
 	}
+
 	return message;
 }
