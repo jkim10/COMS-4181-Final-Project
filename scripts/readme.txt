@@ -1,8 +1,13 @@
-./root_intermediate.sh <password>
+Create 3 files, owned by root: root_password, intermediate_password, server_password. Then:
+    sudo ./root_intermediate.sh root_password intermediate_password
+    sudo ./server_setup.sh intermediate_password server_password
+
+
+./root_intermediate.sh <path_to_pass_in> <path_to_pass_out>
     This will create 2 directories: root_ca and intermediate. Intermediate contains
     the intermediate CA as well as client certificates, private and public keys
 
-./server_setup.sh <passin> <passout>
+./server_setup.sh <path_to_pass_in> <path_to_pass_out>
 
 ./cert_from_csr.sh <path_to_csr> <dest>
 

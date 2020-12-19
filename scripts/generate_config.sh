@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -ne 4 ]; then
-    echo "Usage: ./generate_config <configfile_name> <directory> <common_name> <usr/server/root/intermediate/encrypt>"
+    echo "Usage: ./generate_config.sh <configfile_name> <directory> <common_name> <usr/server/root/intermediate/encrypt>"
     exit 1
 fi
 
