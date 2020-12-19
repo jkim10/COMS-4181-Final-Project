@@ -256,3 +256,17 @@ string CertstoSend(string client_cert, vector<string> recipients)
 
 	return encrypt_certs;
 }
+
+string ParseRecvmsg(string content)
+{
+	size_t user_start = 1;
+	size_t user_end = content.find("@", user_start + 1);
+	string recipient = content.substr(user_start, user_end - user_start);
+	string client_cert = content.substr(user_end + 1, content.length() - user_end - 1);
+	string message = "";
+	if (VerifyCert(client_cert))
+	{
+		message = GetMessage(recipient);
+	}
+	return message;
+}
