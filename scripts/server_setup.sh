@@ -21,7 +21,7 @@ cd certs
 # Create a key
 openssl genrsa -aes256 \
         -out $url.key.pem \
-        -passout file:../$1 2048
+        -passout file:$1 2048
 chmod 400 $url.key.pem
 
 # Create a certificate
@@ -29,14 +29,15 @@ chmod 400 $url.key.pem
 openssl req -config server_config.cnf \
         -key $url.key.pem \
         -new -sha256 -out $url.csr.pem \
-        -passin file:../$1 -passout file:../$2
+        -passin file:$1
 
 # 2. Use intermediate CA to sign CSR
 openssl ca -config server_config.cnf \
         -extensions server_cert -days 375 -notext -md sha256 \
+        -passin file:$2 \
         -in $url.csr.pem \
         -out $url.cert.pem \
-        -cert ../intermediate/certs/intermediate.cert.pem -passin file:../$1
+        -cert ../intermediate/certs/intermediate.cert.pem
 chmod 444 $url.cert.pem
 
 # Verify certificate

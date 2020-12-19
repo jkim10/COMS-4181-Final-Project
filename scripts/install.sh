@@ -8,20 +8,23 @@ fi
 set -e
 
 function get_rand() {
-	cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1
+	cat /dev/urandom | base64 | head -c 32
 }
 
-rca_pass="$(get_rand)"
-ica_pass="$(get_rand)"
-server_pass="$(get_rand)"
-client_pass="$(get_rand)"
+for p in rca_pass ica_pass server_pass; do
+	echo get_rand > $p
+	printf "$p: "
+	cat $p
+	chmod 400 $p
+	sudo chown root:root $p
+done
 
 rm -rf $1
 mkdir -p $1
 
 cd scripts
-./root_intermediate.sh
-./server_setup.sh
+./root_intermediate.sh rca_pass ica_pass
+./server_setup.sh ica_pass server_pass
 mkdir -p $1/serv_conf
 cp certs/*.cert.pem $1/serv_conf/
 cp certs/*.key.pem $1/serv_conf/
