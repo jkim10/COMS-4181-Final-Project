@@ -5,6 +5,8 @@ if [ $# != 2 ]; then
     exit 1
 fi
 
+set -e
+
 sudo rm -rf intermediate/ root_ca/
 
 # Make directory
@@ -90,9 +92,11 @@ mv intermediate ..
 
 cd ..
 
-chmod 550 intermediate
-sudo chown root intermediate
+chmod 750 intermediate
+# sudo chown root intermediate
 # chgrp server_group intermediate
 
 chmod 500 root_ca
 sudo chown root root_ca
+
+set +e

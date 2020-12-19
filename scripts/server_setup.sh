@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# != 2 ]; then
-    echo "Usage: ./server_setup <path_to_pass_in> <path_to_pass_out>"
+    echo "Usage: ./server_setup <path_to_serv_pass> <path_to_ica_pass>"
     exit 1
 fi
 
@@ -34,7 +34,7 @@ openssl req -config server_config.cnf \
 # 2. Use intermediate CA to sign CSR
 openssl ca -config server_config.cnf \
         -extensions server_cert -days 375 -notext -md sha256 \
-        -passin file:$2 \
+        -passin file:$2 -batch \
         -in $url.csr.pem \
         -out $url.cert.pem \
         -cert ../intermediate/certs/intermediate.cert.pem
