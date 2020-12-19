@@ -111,9 +111,12 @@ void getcert(BIO *bio, const std::string& req_str) {
 	
 	// TODO: Sendback Cert
 	*/
-	const std::string signed_cert = my::sign_client_csr(auth_req.payload);
-	
-	my::send_http_response(bio, 200, signed_cert);
+	try {
+		const std::string signed_cert = my::sign_client_csr(auth_req.payload);
+		my::send_http_response(bio, 200, signed_cert);
+	} catch (const std::exception& ex) {
+		my::send_errors_and_throw(bio, 500, "cert signing failed!\n");
+	}
 }
 
 void changepw(BIO *bio, const std::string& req_str) {
@@ -126,9 +129,12 @@ void changepw(BIO *bio, const std::string& req_str) {
 		my::send_errors_and_throw(bio, 400, "changepw processing error!\n");
 	}
 	
-	// TODO: new cert generation
-	
-	my::send_http_response(bio, 200, "NEW CERTIFICATE");
+	try {
+		const std::string signed_cert = my::sign_client_csr(auth_req.payload);
+		my::send_http_response(bio, 200, signed_cert);
+	} catch (const std::exception& ex) {
+		my::send_errors_and_throw(bio, 500, "cert signing failed!\n");
+	}
 }
 
 } // namespace my
