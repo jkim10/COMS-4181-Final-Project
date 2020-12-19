@@ -18,23 +18,6 @@ void WriteStringtoFile(string file, string filename)
 	fclose(fp);
 }
 
-bool isValidCert(string filename)
-{
-	SSL_CTX *ctx = SSL_CTX_new(TLS_method());
-	if (SSL_CTX_load_verify_locations(ctx, filename.c_str(), nullptr) != 1)
-	{
-		cout << "Invalid cert" << endl;
-		SSL_CTX_free(ctx);
-        return false;
-	}
-    else
-    {
-    	cerr << "Cert is valid" << endl;
-		SSL_CTX_free(ctx);
-    	return true;
-    }
-}
-
 bool isValidRecipient(string recipient)
 {
 	string user_path = "./mailbox/users/" + recipient;
@@ -71,10 +54,53 @@ string GetCert(string recipient)
 		return ".\n";
 }
 
+int SigVerify(cont char* cert_pem, const char* intermediate_pem)
+{
+	BIO *b = BIO_new(BIO_s_mem());
+	BIO_puts(b, intermediate_pem);
+	X509 *issuer = PEM_read_bio_X509(b, NULL, NULL, NULL);
+	EVP_PKEY* signing_key = X509_get_pubkey(issuer);
+
+	BIO* c = BIO_new(BIO_s_mem());
+	BIO_puts(c, cert_pem);
+	X509* x509 = PEM_read_bio_X509(c, NULL, NULL, NULL);
+
+	int res = X509_verify(x509, signing_key);
+
+	EVP_PKEY_free(signing_key);
+	BIO_free(b);
+	BIO_free(c);
+	X509_free(x509);
+	X509_free(issuer);
+
+	return res;
+}
+
+bool isValidCert(const char* client_cert_path, const char* intermediate_cert_path)
+{
+	string client_cert = ReadFiletoString(client_cert_path);
+	string intermediate_cert = ReadFiletoString(intermediate_cert_path);
+
+	//SSL_CTX* ctx = SSL_CTX_new(TLS_method());
+	//if (SSL_CTX_load_verify_locations(ctx, filename.c_str(), nullptr) != 1)
+	if (SigVerify(client_cert.c_str(), intermediate_cert.c_str()) <= 0)
+	{
+		cout << "Invalid cert" << endl;
+		//SSL_CTX_free(ctx);
+		return false;
+	}
+	else
+	{
+		cerr << "Cert is valid" << endl;
+		//SSL_CTX_free(ctx);
+		return true;
+	}
+}
+
 bool VerifyCert(string client_cert)
 {
 	WriteStringtoFile(client_cert, "./mailbox/tmp/client.cert.pem");
-	return isValidCert("./mailbox/tmp/client.cert.pem");
+	return isValidCert("./mailbox/tmp/client.cert.pem", "./mailbox/tmp/intermediate.cert.pem");
 }
 
 bool isNumeric(const string &str)
