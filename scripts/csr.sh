@@ -8,7 +8,7 @@ if [ $# -ne 3 ]; then
 fi
 
 # Generate config file
-./generate_config.sh csr_config.cnf ./certificates $3 encrypt
+../scripts/generate_config.sh csr_config.cnf ./certificates $3 encrypt
 
 # Create CSR from client's private key
 openssl req -config csr_config.cnf \

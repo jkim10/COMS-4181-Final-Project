@@ -114,14 +114,15 @@ void NameMinusOne(char filename[])
 	}
 }
 
-void UploadMessage(string message, string recipient)
+// 1 is error, 0 is good
+int UploadMessage(string message, string recipient)
 {
 	string user_path = "./mailbox/users/" + recipient + "/messages";
 	DIR *dir = opendir(user_path.c_str());
 	if (dir == NULL)
 	{
 		cerr << "Cannot upload message for " << recipient << endl;
-		return;
+		return 1;
 	}
 	
 	char last_file[] = "00000";
@@ -140,7 +141,7 @@ void UploadMessage(string message, string recipient)
 			else
 			{
 				cerr << "Invalid messges contained" << endl;
-				return;
+				return 1;
 			}
 		}
 	}
@@ -150,7 +151,7 @@ void UploadMessage(string message, string recipient)
 	if (strcmp(last_file, "99999") == 0)
 	{
 		cerr << "Full" << endl;
-		return;
+		return 1;
 	}
 
 	NamePlusOne(last_file);
@@ -158,15 +159,40 @@ void UploadMessage(string message, string recipient)
 	string file_path = "./mailbox/users/" + recipient + "/messages/" + last_file;
 
 	WriteStringtoFile(message, file_path);
+
+	return 0;
 }
 
-void ParseMessages(string content)
+// 1 is error, 0 is good
+int ParseMessages(string content)
 {
+	if (content.length() < 3)
+	{
+		cerr << "Too short a body" << endl;
+		return 1;
+	}
+	if (content[0] != '@')
+	{
+		cerr << "Lack of start @" << endl;
+		return 1;
+	}
+
 	size_t user_start = 1;
 	size_t user_end = content.find("@", user_start + 1);
+	if (user_end >= content.length())
+	{
+		cerr << "Lack of end @" << endl;
+		return 1;
+	}
+	else if (user_end == content.length() - 1)
+	{
+		cerr << "Empty message" << endl;
+		return 1;
+	}
+
 	string recipient = content.substr(user_start, user_end - user_start);
 	string message = content.substr(user_end + 1, content.length() - user_end - 1);
-	UploadMessage(message, recipient);
+	return UploadMessage(message, recipient);
 }
 
 string GetMessage(string recipient)
@@ -227,11 +253,17 @@ string ParseSendmsg(string content, vector<string> &recipients)
 {
 	if (content.back() != '\n')
 	{
-		cerr << "Wrong format" << endl;
+		cerr << "Wrong format: need a new line at the end" << endl;
 		return "";
 	}
 
 	size_t found = content.find("-----END CERTIFICATE-----") + 25 + 1;
+	if (found > content.length())
+	{
+		cerr << "Invalid certificate: lack of end of certificate" << endl;
+		return "";
+	}
+
 	string client_cert = content.substr(0, found);
 	content = content.substr(found, content.length()-found);
 	while (content.length() > 0)
@@ -246,7 +278,7 @@ string ParseSendmsg(string content, vector<string> &recipients)
 
 string CertstoSend(string client_cert, vector<string> recipients)
 {
-	string encrypt_certs;
+	string encrypt_certs = "";
 	if (VerifyCert(client_cert))
 	{
 		for (int i = 0; i < recipients.size(); ++i)
@@ -256,4 +288,43 @@ string CertstoSend(string client_cert, vector<string> recipients)
 	}
 
 	return encrypt_certs;
+}
+
+string ParseRecvmsg(string content)
+{
+	string message = "";
+
+	if (content.length() < 4)
+	{
+		cerr << "Too short a body" << endl;
+		return "";
+	}
+	if (content[0] != '@')
+	{
+		cerr << "Lack of start @" << endl;
+		return "";
+	}
+
+	size_t user_start = 1;
+	size_t user_end = content.find("@", user_start + 1);
+	if (user_end >= content.length())
+	{
+		cerr << "Lack of end @" << endl;
+		return "";
+	}
+	else if (user_end == content.length() - 1)
+	{
+		cerr << "Lack of client certificate" << endl;
+		return "";
+	}
+
+	string recipient = content.substr(user_start, user_end - user_start);
+	string client_cert = content.substr(user_end + 1, content.length() - user_end - 1);
+	
+	if (VerifyCert(client_cert))
+	{
+		message = GetMessage(recipient);
+	}
+
+	return message;
 }

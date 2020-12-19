@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -ne 2 ]; then
-    echo "Usage: ./client_gen_keypair <dest> <pass_out>"
+    echo "Usage: ./client_gen_keypair <dest>"
     exit 1
 fi
 
@@ -12,8 +12,7 @@ if test -f "$FILE"; then
 else
     # Create a private key
 	openssl genrsa -aes256 \
-        -out $1 \
-        -passout pass:$2 2048
+        -out $1 2048
 fi
 
 chmod 400 $1
