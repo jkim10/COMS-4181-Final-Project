@@ -19,6 +19,7 @@ all: server server-certificate.pem users.txt
 	./create-tree
 	# This is only for testing please remove once we have certs in mailbox working
 	cp encrypt.cert.pem ./mailbox/users/addleness/certs/encrypt.cert.pem
+	cp intermediate.cert.pem ./mailbox/tmp
 	
 server: utils.o utils_server.o
 
