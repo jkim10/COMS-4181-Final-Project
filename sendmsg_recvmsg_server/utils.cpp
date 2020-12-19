@@ -162,8 +162,30 @@ int UploadMessage(string message, string recipient)
 
 int ParseMessages(string content)
 {
+	if (content.length() < 3)
+	{
+		cerr << "Too short a body" << endl;
+		return 1;
+	}
+	if (content[0] != '@')
+	{
+		cerr << "Lack of start @" << endl;
+		return 1;
+	}
+
 	size_t user_start = 1;
 	size_t user_end = content.find("@", user_start + 1);
+	if (user_end >= content.length())
+	{
+		cerr << "Lack of end @" << endl;
+		return 1;
+	}
+	else if (user_end == content.length() - 1)
+	{
+		cerr << "Empty message" << endl;
+		return 1;
+	}
+
 	string recipient = content.substr(user_start, user_end - user_start);
 	string message = content.substr(user_end + 1, content.length() - user_end - 1);
 	return UploadMessage(message, recipient);
