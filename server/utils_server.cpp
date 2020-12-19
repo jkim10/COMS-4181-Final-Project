@@ -292,14 +292,39 @@ string CertstoSend(string client_cert, vector<string> recipients)
 
 string ParseRecvmsg(string content)
 {
+	string message = "";
+
+	if (content.length() < 4)
+	{
+		cerr << "Too short a body" << endl;
+		return "";
+	}
+	if (content[0] != '@')
+	{
+		cerr << "Lack of start @" << endl;
+		return "";
+	}
+
 	size_t user_start = 1;
 	size_t user_end = content.find("@", user_start + 1);
+	if (user_end >= content.length())
+	{
+		cerr << "Lack of end @" << endl;
+		return "";
+	}
+	else if (user_end == content.length() - 1)
+	{
+		cerr << "Lack of client certificate" << endl;
+		return "";
+	}
+
 	string recipient = content.substr(user_start, user_end - user_start);
 	string client_cert = content.substr(user_end + 1, content.length() - user_end - 1);
-	string message = "";
+	
 	if (VerifyCert(client_cert))
 	{
 		message = GetMessage(recipient);
 	}
+
 	return message;
 }
