@@ -197,14 +197,17 @@ int main()
 				fprintf(stderr, "%s\n", request.body.c_str());
 				string client_cert = ParseSendmsg(request.body, recipients);
 				string encrypt_cert = CertstoSend(client_cert, recipients);
-				my::send_http_response(bio.get(),200, encrypt_cert);
+				my::send_http_response(bio.get(), 200, encrypt_cert);
 			} else if (request.endpoint == "upload") {
 				// TODO: Takes in a recipient with an encrypted message
 				// Header: POST /upload HTTP/1.1\r\n
 				//		   Content:Length: <length>
 				// Format of Body: @username@<encrypted message>
-				ParseMessages(request.body);
-				my::send_errors_and_throw(bio.get(), 200, "Message Uploaded");
+				int code = ParseMessages(request.body);
+				if (code == 0)
+					my::send_http_response(bio.get(), 200, "Message Uploaded");
+				else
+					my::send_errors_and_throw(bio.get(), 400, "Message fails to upload");
 			} else if (request.endpoint == "recvmsg") {
 				string message = ParseRecvmsg(request.body);
 				my::send_http_response(bio.get(), 200, message);

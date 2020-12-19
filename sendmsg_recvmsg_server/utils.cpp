@@ -112,14 +112,14 @@ void NameMinusOne(char filename[])
 	}
 }
 
-void UploadMessage(string message, string recipient)
+int UploadMessage(string message, string recipient)
 {
 	string user_path = "./users/" + recipient + "/messages";
 	DIR *dir = opendir(user_path.c_str());
 	if (dir == NULL)
 	{
 		cerr << "Cannot upload message for " << recipient << endl;
-		return;
+		return 1;
 	}
 	
 	char last_file[] = "00000";
@@ -138,7 +138,7 @@ void UploadMessage(string message, string recipient)
 			else
 			{
 				cerr << "Invalid messges contained" << endl;
-				return;
+				return 1;
 			}
 		}
 	}
@@ -148,7 +148,7 @@ void UploadMessage(string message, string recipient)
 	if (strcmp(last_file, "99999") == 0)
 	{
 		cerr << "Full" << endl;
-		return;
+		return 1;
 	}
 
 	NamePlusOne(last_file);
@@ -156,15 +156,17 @@ void UploadMessage(string message, string recipient)
 	string file_path = "./users/" + recipient + "/messages/" + last_file;
 
 	WriteStringtoFile(message, file_path);
+
+	return 0;
 }
 
-void ParseMessages(string content)
+int ParseMessages(string content)
 {
 	size_t user_start = 1;
 	size_t user_end = content.find("@", user_start + 1);
 	string recipient = content.substr(user_start, user_end - user_start);
 	string message = content.substr(user_end + 1, content.length() - user_end - 1);
-	UploadMessage(message, recipient);
+	return UploadMessage(message, recipient);
 }
 
 string GetMessage(string recipient)
