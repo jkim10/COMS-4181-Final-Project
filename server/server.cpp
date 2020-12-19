@@ -94,11 +94,26 @@ PASS_AUTH_REQ pass_auth(BIO *bio, const std::string& req_str) {
 void getcert(BIO *bio, const std::string& req_str) {
 	const PASS_AUTH_REQ auth_req = my::pass_auth(bio, req_str);
 	
-	std::cout << "getcert: \n" << auth_req.str();
+	std::cerr << "getcert: \n" << auth_req.str();
 	
-	// TODO: retrive and send cert
+	/*
+	// Store CSR
+	std::string csr_filename = my::create_tmp_file(auth_req.payload);
 	
-	my::send_http_response(bio, 200, "NEW CERTIFICATE");
+	// Sign CSR
+	try {
+		char cmd[] = "./sign_client_csr.sh";
+		char* const args[] = {cmd, NULL};
+		//my::fork_exec(cmd, args);
+	} catch (const std::exception& ex) {
+		my::send_errors_and_throw(bio, 500, "unable to !\n");
+	}
+	
+	// TODO: Sendback Cert
+	*/
+	const std::string signed_cert = my::sign_client_csr(auth_req.payload);
+	
+	my::send_http_response(bio, 200, signed_cert);
 }
 
 void changepw(BIO *bio, const std::string& req_str) {
