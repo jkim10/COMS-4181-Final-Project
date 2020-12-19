@@ -97,11 +97,29 @@ PASS_AUTH_REQ pass_auth(BIO *bio, const std::string& req_str) {
 void getcert(BIO *bio, const std::string& req_str) {
 	const PASS_AUTH_REQ auth_req = my::pass_auth(bio, req_str);
 	
-	std::cout << "getcert: \n" << auth_req.str();
+	std::cerr << "getcert: \n" << auth_req.str();
 	
-	// TODO: retrive and send cert
+	/*
+	// Store CSR
+	std::string csr_filename = my::create_tmp_file(auth_req.payload);
 	
-	my::send_http_response(bio, 200, "NEW CERTIFICATE");
+	// Sign CSR
+	try {
+		char cmd[] = "./sign_client_csr.sh";
+		char* const args[] = {cmd, NULL};
+		//my::fork_exec(cmd, args);
+	} catch (const std::exception& ex) {
+		my::send_errors_and_throw(bio, 500, "unable to !\n");
+	}
+	
+	// TODO: Sendback Cert
+	*/
+	try {
+		const std::string signed_cert = my::sign_client_csr(auth_req.payload);
+		my::send_http_response(bio, 200, signed_cert);
+	} catch (const std::exception& ex) {
+		my::send_errors_and_throw(bio, 500, "cert signing failed!\n");
+	}
 }
 
 void changepw(BIO *bio, const std::string& req_str) {
@@ -114,9 +132,12 @@ void changepw(BIO *bio, const std::string& req_str) {
 		my::send_errors_and_throw(bio, 400, "changepw processing error!\n");
 	}
 	
-	// TODO: new cert generation
-	
-	my::send_http_response(bio, 200, "NEW CERTIFICATE");
+	try {
+		const std::string signed_cert = my::sign_client_csr(auth_req.payload);
+		my::send_http_response(bio, 200, signed_cert);
+	} catch (const std::exception& ex) {
+		my::send_errors_and_throw(bio, 500, "cert signing failed!\n");
+	}
 }
 
 } // namespace my
@@ -147,7 +168,13 @@ int main()
 	static auto shutdown_the_socket = [fd = BIO_get_fd(accept_bio.get(), nullptr)]() {
 		close(fd);
 	};
-	signal(SIGINT, [](int) { shutdown_the_socket(); });
+	if (signal(SIGINT, [](int) { shutdown_the_socket(); }) == SIG_ERR) {
+		my::print_errors_and_exit("Error setting SIGINT handler");
+	}
+	
+	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+		my::print_errors_and_exit("Error setting SIGPIPE handler");
+	}
 
 	while (auto bio = my::accept_new_tcp_connection(accept_bio.get())) {
 		bio = std::move(bio)
