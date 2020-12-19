@@ -24,11 +24,13 @@ bool isValidCert(string filename)
 	if (SSL_CTX_load_verify_locations(ctx, filename.c_str(), nullptr) != 1)
 	{
 		cout << "Invalid cert" << endl;
+		SSL_CTX_free(ctx);
         return false;
 	}
     else
     {
     	cerr << "Cert is valid" << endl;
+		SSL_CTX_free(ctx);
     	return true;
     }
 }

@@ -39,10 +39,14 @@ bool isValidRecipient(string recipient)
 	if (access(user_path.c_str(), F_OK) == -1)
 	{
 		cerr << "Invalid recipient: " << recipient << endl;
+		SSL_CTX_free(ctx);
 		return false;
 	}
 	else
+	{
+		SSL_CTX_free(ctx);
 		return true;
+	}
 }
 
 string ReturnCert(string recipient)
