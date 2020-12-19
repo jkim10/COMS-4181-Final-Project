@@ -20,17 +20,19 @@ void WriteStringtoFile(string file, string filename)
 
 bool isValidCert(string filename)
 {
-	SSL_CTX *ctx = SSL_CTX_new(TLS_method());
+	SSL_CTX* ctx = SSL_CTX_new(TLS_method());
 	if (SSL_CTX_load_verify_locations(ctx, filename.c_str(), nullptr) != 1)
 	{
 		cout << "Invalid cert" << endl;
-        return false;
+		SSL_CTX_free(ctx);
+		return false;
 	}
-    else
-    {
-    	cerr << "Cert is valid" << endl;
-    	return true;
-    }
+	else
+	{
+		cerr << "Cert is valid" << endl;
+		SSL_CTX_free(ctx);
+		return true;
+	}
 }
 
 bool isValidRecipient(string recipient)
@@ -39,12 +41,10 @@ bool isValidRecipient(string recipient)
 	if (access(user_path.c_str(), F_OK) == -1)
 	{
 		cerr << "Invalid recipient: " << recipient << endl;
-		SSL_CTX_free(ctx);
 		return false;
 	}
 	else
 	{
-		SSL_CTX_free(ctx);
 		return true;
 	}
 }
