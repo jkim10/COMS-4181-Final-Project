@@ -81,18 +81,14 @@ bool isValidCert(const char* client_cert_path, const char* intermediate_cert_pat
 	string client_cert = ReadFiletoString(client_cert_path);
 	string intermediate_cert = ReadFiletoString(intermediate_cert_path);
 
-	//SSL_CTX* ctx = SSL_CTX_new(TLS_method());
-	//if (SSL_CTX_load_verify_locations(ctx, filename.c_str(), nullptr) != 1)
 	if (SigVerify(client_cert.c_str(), intermediate_cert.c_str()) <= 0)
 	{
 		cout << "Invalid cert" << endl;
-		//SSL_CTX_free(ctx);
 		return false;
 	}
 	else
 	{
 		cerr << "Cert is valid" << endl;
-		//SSL_CTX_free(ctx);
 		return true;
 	}
 }
