@@ -7,7 +7,7 @@ int main(int argc, char **argv)
 	SSL *ssl;
 	const SSL_METHOD *meth;
 	BIO *sbio;
-	int err, res, ilen, sock, message_len = 0;
+	int err, res, ilen, sock, status, message_len = 0;
 	char ibuf[512];
     char ubuf[512];
     char pbuf[512];
@@ -16,10 +16,11 @@ int main(int argc, char **argv)
 	char *obuf = "POST /changepw HTTP/1.0\r\n";
 	char *newline = "\r\n";
 	char *content_length = "Content-Length:";
+	char csr_dest[256] = "./certificates/csr/";
 	struct stat buf;
 
-    if (argc != 6) {
-        fprintf(stderr, "Usage: ./changepw <username> <password> <new_password> <CAfile> <CApath>");
+    if (argc != 5) {
+        fprintf(stderr, "Usage: ./changepw <username> <password> <new_password> <path_to_private_key>\n");
         exit(1);
     }
 
@@ -68,13 +69,35 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
-	// Open keyfile to get size
-	int key_file = open(argv[4], O_RDONLY);
-	if (key_file < 0) {
-		perror("Failed to open keyfile");
+	/* Call csr.sh */
+	// Set up dest filename
+	strncat(csr_dest, argv[1], sizeof(csr_dest) - strlen(csr_dest));
+	strcat(csr_dest, ".csr.pem");
+	printf("dest=%s\n", csr_dest);
+	int pid = fork();
+	if (pid < 0) {
+		perror("fork failed");
+		goto out;
+	} else if (pid == 0) { // child
+		// ./csr.sh <path_to_private_key> <csr_dest> <username>
+		// ./csr.sh argv[3] <dest> argv[1]
+		execl("/bin/sh", "sh", "../scripts/csr.sh", argv[4], csr_dest, 
+			argv[1], (char *) NULL);
+		printf("execl failed\n");
+	} else { // parent
+		waitpid(pid, &status, 0); // TODO: check return val
+		if(WEXITSTATUS(status) == 1)
+			goto out;
+	}
+
+	// Open csr
+	int csr = open(csr_dest, O_RDONLY);
+	if (csr < 0) {
+		perror("Failed to open CSR file");
 		goto out;
 	}
-	fstat(key_file, &buf);
+	// Stat csr
+	fstat(csr, &buf);
 	off_t size = buf.st_size;
 	message_len += size;
 	sprintf(len_buf, "%d", message_len);
@@ -95,10 +118,10 @@ int main(int argc, char **argv)
 	SSL_write(ssl, newline, strlen(newline));
 
 	
-	while ((res = read(key_file, ibuf, sizeof(ibuf))) > 0) {
+	while ((res = read(csr, ibuf, sizeof(ibuf))) > 0) {
 		SSL_write(ssl, ibuf, res);
 	}
-	close(key_file);
+	close(csr);
 
 
 	/* Parse response */
@@ -119,6 +142,7 @@ int main(int argc, char **argv)
 	// Create destination file
 	char filename[256] = "./certificates/";
 	strncat(filename, ubuf, sizeof(filename) - strlen("./certificates"));
+	strcat(filename, ".cert.pem");
 	int dest = open(filename, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR); // if file already exists it will be overwritten
 	if (dest < 0 ){
 		perror("Failed to create certificate file");

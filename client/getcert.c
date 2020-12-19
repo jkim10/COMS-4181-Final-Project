@@ -18,13 +18,15 @@ int main(int argc, char **argv)
 	struct stat buf;
 
     if (argc != 4) {
-        fprintf(stderr, "Usage: ./getcert <username> <password> <path-to-private-key>\n");
+        fprintf(stderr, "Usage: ./getcert <username> <password> <path_to_private_key>\n");
         exit(1);
     }
 
 	//TODO: use getpass()
 
 	//TODO: check if username or password contain a newline. this is illegal
+
+	//TODO: enforce limit on param length
 
     strncpy(ubuf, argv[1], sizeof(ubuf)-1);
 	strncpy(pbuf, argv[2], sizeof(pbuf)-1);
@@ -69,7 +71,7 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
-	/* Call getcert-client.sh */
+	/* Call csr.sh */
 	// Set up dest filename
 	strncat(csr_dest, argv[1], sizeof(csr_dest) - strlen(csr_dest));
 	strcat(csr_dest, ".csr.pem");
@@ -79,16 +81,15 @@ int main(int argc, char **argv)
 		perror("fork failed");
 		goto out;
 	} else if (pid == 0) { // child
-		// ./getcert-client.sh <path_to_private_key> <csr_dest> <username>
-		// ./getcert-client.sh argv[3] <dest> argv[1]
-		execl("/bin/sh", "sh", "../cert_gen/getcert-client.sh", argv[3], csr_dest, 
+		// ./csr.sh <path_to_private_key> <csr_dest> <username>
+		// ./csr.sh argv[3] <dest> argv[1]
+		execl("/bin/sh", "sh", "../scripts/csr", argv[3], csr_dest, 
 			argv[1], (char *) NULL);
 		printf("execl failed\n");
 	} else { // parent
 		waitpid(pid, &status, 0); // TODO: check return val
 		if(WEXITSTATUS(status) == 1)
 			goto out;
-		
 	}
 
 	// Open csr

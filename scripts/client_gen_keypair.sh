@@ -1,13 +1,9 @@
 #!/bin/bash
 
-if [ $# -ne 3 ]; then
-    echo "Usage: ./client_gen_keypair <unique_identifier> <dest> <pass_out>"
+if [ $# -ne 2 ]; then
+    echo "Usage: ./client_gen_keypair <dest> <pass_out>"
     exit 1
 fi
-
-# Generate config file
-./generate_config client_config.cnf intermediate $1 usr
-mv client_config.cnf ./intermediate
 
 # Only create private key if it does not exist
 FILE=$2

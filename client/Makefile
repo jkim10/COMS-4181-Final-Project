@@ -18,7 +18,7 @@ client_utils.o: client_utils.c client_utils.h
 
 .PHONY: clean
 clean:
-	rm -f *.o getcert
+	rm -f *.o getcert changepw
 
 .PHONY: all
 all: clean getcert changepw
