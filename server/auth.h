@@ -72,7 +72,7 @@ public:
 	}
 
 private:
-	static const constexpr char* HPW_FILE_PATH = "users.txt";
+	static const constexpr char* HPW_FILE_PATH = "serv_conf/users.txt";
 	static std::unordered_map<std::string, std::string> hpw_dict;
 	
 	bool valid = false;

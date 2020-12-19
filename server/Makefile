@@ -13,12 +13,9 @@ ifeq ($(OS),Darwin)
 	LDFLAGS+=-L/usr/local/opt/openssl@1.1/lib/
 endif
 
-.PHONY: all clean clean_all clean_certs test mem_check
+.PHONY: all clean test mem_check
 
-all: server server-certificate.pem users.txt
-	./create-tree
-	# This is only for testing please remove once we have certs in mailbox working
-	cp encrypt.cert.pem ./mailbox/users/addleness/certs/encrypt.cert.pem
+all: server
 	
 server: utils.o utils_server.o
 
@@ -26,28 +23,17 @@ utils.o: utils.cpp
  
 utils_server.o: utils_server.cpp
 
-regex_test: 
-
-server-certificate.pem: server-public-key.pem
-	openssl req -new -x509 -sha256 -key server-private-key.pem -subj "/CN=duckduckgo.com" -out server-certificate.pem
-
-server-public-key.pem: server-private-key.pem
-	openssl ec -in server-private-key.pem -pubout -out server-public-key.pem
-
-server-private-key.pem:
-	openssl ecparam -genkey -name prime256v1 -noout -out server-private-key.pem
-
 users.txt: 
-	cp users.init.txt users.txt
+	cp ../scripts/users.init.txt users.txt
+
+mailbox:
+	./create-tree.sh
+	# This is only for testing please remove once we have certs in mailbox working
+	cp encrypt.cert.pem ./mailbox/users/addleness/certs/encrypt.cert.pem
 
 clean:
-	rm -f server *.o regex_test users.txt
+	rm -f server *.o users.txt
 	rm -rf mailbox
-
-clean_all: clean clean_certs
-
-clean_certs: 
-	rm -f server-*.pem
 
 test: server
 	printf "addleness\nCardin_pwns\nnew_pass\ncertificate" | curl -v --cacert server-certificate.pem --resolve duckduckgo.com:8080:127.0.0.1 --data-binary @- https://duckduckgo.com:8080/changepw && printf "\n\n"
@@ -60,4 +46,4 @@ test: server
 
 mem_check: CXXFLAGS+= -g
 mem_check: clean all server
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./server
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --track-fds=yes ./server

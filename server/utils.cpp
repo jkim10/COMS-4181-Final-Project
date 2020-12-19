@@ -102,14 +102,14 @@ std::string sign_client_csr(const std::string& csr) {
 		close(pipefd_in[0]);
 		close(pipefd_in[1]);
 		
-		// TODO: fill in the filler variables
 		char exe_path[] = "openssl";
 		execlp(
 			exe_path, exe_path, "ca", \
-			"-config", "ICA_CONFIG", \
-			"-extensions", "ICA_Config_Extension", \
+			"-config", "serv_conf/client_config.cnf", \
+			"-extensions", "usr_cert", \
 			"-days", "375", "-notext", \
 			"-md", "sha256", "-batch", \
+			"-passin", "file:serv_conf/key_pwd", \
 			NULL);
 		
 		// exec failed!
