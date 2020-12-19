@@ -20,7 +20,7 @@ int main(int argc, char **argv)
 	struct stat buf;
 
     if (!get_inputs(ubuf, pbuf, NULL, private_key)) {
-		fprintf(stderr, "Password cannot be longer than %d characters\n", MAX_CLIENT_INPUT);
+		fprintf(stderr, "Input cannot be longer than %d characters\n", MAX_CLIENT_INPUT);
 		return 1;
 	}
 
@@ -56,6 +56,7 @@ int main(int argc, char **argv)
 	if (sock == -1) {
 		fprintf(stderr, "Could not create socket\n");
 		SSL_CTX_free(ctx);
+		SSL_free(ssl);
 		return 1;
 	}
 
@@ -74,7 +75,6 @@ int main(int argc, char **argv)
 	// Set up dest filename
 	strncat(csr_dest, ubuf, sizeof(csr_dest) - strlen(csr_dest));
 	strcat(csr_dest, ".csr.pem");
-	printf("dest=%s\n", csr_dest);
 	int pid = fork();
 	if (pid < 0) {
 		perror("fork failed");
@@ -84,9 +84,11 @@ int main(int argc, char **argv)
 			ubuf, (char *) NULL);
 		printf("execl failed\n");
 	} else { // parent
-		waitpid(pid, &status, 0); // TODO: check return val
-		if(WEXITSTATUS(status) == 1)
+		res = waitpid(pid, &status, 0);
+		if (res < 1 || WEXITSTATUS(status) == 1){
+			fprintf(stderr, "CSR creation failed\n");
 			goto out;
+		}
 	}
 
 	// Open csr
