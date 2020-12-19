@@ -83,8 +83,8 @@ string get_recip_certs(vector<string> recips, int message_len, string cert_path)
 	SSL_write(ssl, cert_req.c_str(), cert_req.length());
 	SSL_write(ssl, content_length.c_str(), content_length.length());
 	// TODO: when we have certificates setup, uncomment this and replace duckduckgo
-	// string cert = ReadFiletoString(cert_path)
-	string cert = ReadFiletoString("./duckduckgo.pem");
+	string cert = ReadFiletoString(cert_path.c_str());
+	// string cert = ReadFiletoString("./duckduckgo.pem");
 	message_len += cert.length();
 	SSL_write(ssl, to_string(message_len).c_str(), to_string(message_len).length());
 	SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));

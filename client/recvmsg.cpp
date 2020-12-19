@@ -215,8 +215,7 @@ int main(int argc, char **argv)
 	string line;
 	string recip = argv[1];
 	string cert_path = argv[2];
-	// string cert = ReadFiletoString(cert_path);
-	string cert = ReadFiletoString("./duckduckgo.pem");
+	string cert = ReadFiletoString(cert_path.c_str());
 
 	string encrypted_message = get_encrypted_message(recip,cert);
 	string decrypted = decrypt(cert, encrypted_message);
