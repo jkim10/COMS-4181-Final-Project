@@ -1,14 +1,12 @@
 CC = gcc
-CFLAGS = -g -Wall -lssl -lcrypto "-I/usr/local/opt/openssl@1.1/include"
+CFLAGS = -g -Wall "-I/usr/local/opt/openssl@1.1/include"
 LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
-
+LDLIBS= -lssl -lcrypto 
 make: getcert changepw
 
 getcert: getcert.o client_utils.o
-	$(CC) $(CFLAGS) $(LDFLAGS) getcert.o client_utils.o -o getcert
 
 changepw: changepw.o client_utils.o
-	$(CC) $(CFLAGS) $(LDFLAGS) changepw.o client_utils.o -o changepw
 
 getcert.o: getcert.c client_utils.h
 
