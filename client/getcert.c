@@ -127,11 +127,14 @@ int main(int argc, char **argv)
 	/* Parse response */
 	int response_code = get_status_code(ssl, ibuf);
 	if (response_code == BAD_RESPONSE)
-		printf("bad response, code = %d\n", response_code);
+		printf("Bad response, code = %d\n", response_code);
 	else if (response_code == SSL_ERROR)
 		printf("SSL error, response code = %d\n", response_code);
-	if (response_code != 200)
+	else if (response_code != 200) {
+		printf("Failed with response code %d\n", response_code);
 		goto out;
+	}
+		
 
 	// Read past the rest of the headers
 	skip_headers(ssl);
@@ -139,7 +142,7 @@ int main(int argc, char **argv)
 	/* Read the certificate */
 
 	// Create destination file
-	char filename[256] = "./certificates/";
+	char filename[MAX_CLIENT_INPUT + 35] = "./certificates/";
 	strncat(filename, ubuf, sizeof(filename) - strlen("./certificates"));
 	strcat(filename, ".cert.pem");
 	int dest = open(filename, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR); // if file already exists it will be overwritten
@@ -158,6 +161,8 @@ int main(int argc, char **argv)
 			goto out;
 		}
 	}
+
+	printf("Wrote certificate to %s\n", filename);
 
 	close(dest);
 	SSL_CTX_free(ctx);

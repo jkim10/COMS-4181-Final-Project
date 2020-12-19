@@ -129,8 +129,12 @@ int main(int argc, char **argv)
 	if (response_code == 403) {
 		fprintf(stderr, "Messages pending. Cannot change password\n");
 		goto out;
-	} else if (response_code != 200) {
-		fprintf(stderr, "Server error. Failed to change password\n");
+	} else if (response_code == BAD_RESPONSE)
+		printf("Bad response, code = %d\n", response_code);
+	else if (response_code == SSL_ERROR)
+		printf("SSL error, response code = %d\n", response_code);
+	else if (response_code != 200) {
+		printf("Failed with response code %d\n", response_code);
 		goto out;
 	}
 
@@ -140,7 +144,7 @@ int main(int argc, char **argv)
 	/* Read the certificate */
 
 	// Create destination file
-	char filename[256] = "./certificates/";
+	char filename[MAX_CLIENT_INPUT + 35] = "./certificates/";
 	strncat(filename, ubuf, sizeof(filename) - strlen("./certificates"));
 	strcat(filename, ".cert.pem");
 	int dest = open(filename, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR); // if file already exists it will be overwritten
@@ -158,6 +162,8 @@ int main(int argc, char **argv)
 			goto out;
 		}
 	}
+
+	printf("Wrote certificate to %s\n", filename);
 
 	close(dest);
 	SSL_CTX_free(ctx);
