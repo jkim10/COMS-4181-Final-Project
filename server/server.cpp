@@ -144,8 +144,8 @@ void changepw(BIO *bio, const std::string& req_str) {
 
 int main(int argc, char* argv[])
 {
-	if (argc != 3) {
-		std::cerr << "Usage: " << argv[0] << " <server_cert> <server_priv_key>" << std::endl;
+	if (argc != 2) {
+		std::cerr << "Usage: " << argv[0] << " <FQDN>" << std::endl;
 		return 1;
 	}
 	
@@ -158,10 +158,14 @@ int main(int argc, char* argv[])
 	SSL_CTX_set_min_proto_version(ctx.get(), TLS1_2_VERSION);
 #endif
 
-	if (SSL_CTX_use_certificate_file(ctx.get(), argv[1], SSL_FILETYPE_PEM) <= 0) {
+	const std::string fdqn (argv[1]);
+	const std::string serv_cert_path = "serv_conf/" + fdqn + ".cert.pem";
+	if (SSL_CTX_use_certificate_file(ctx.get(), serv_cert_path.c_str(), SSL_FILETYPE_PEM) <= 0) {
 		my::print_errors_and_exit("Error loading server certificate");
 	}
-	if (SSL_CTX_use_PrivateKey_file(ctx.get(), argv[2], SSL_FILETYPE_PEM) <= 0) {
+	
+	const std::string serv_key_path = "serv_conf/" + fdqn + ".key.pem";
+	if (SSL_CTX_use_PrivateKey_file(ctx.get(), serv_key_path.c_str(), SSL_FILETYPE_PEM) <= 0) {
 		my::print_errors_and_exit("Error loading server private key");
 	}
 
