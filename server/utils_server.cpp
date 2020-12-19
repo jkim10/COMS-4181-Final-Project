@@ -54,7 +54,7 @@ string GetCert(string recipient)
 		return ".\n";
 }
 
-int SigVerify(cont char* cert_pem, const char* intermediate_pem)
+int SigVerify(const char* cert_pem, const char* intermediate_pem)
 {
 	BIO *b = BIO_new(BIO_s_mem());
 	BIO_puts(b, intermediate_pem);
