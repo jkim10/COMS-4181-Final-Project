@@ -9,28 +9,27 @@ int main(int argc, char **argv)
 	BIO *sbio;
 	int err, res, sock, ilen, status, message_len = 0;
 
-	char ibuf[512], ubuf[512], pbuf[512];
+	char ibuf[512];
+	char ubuf[MAX_CLIENT_INPUT], pbuf[MAX_CLIENT_INPUT + 1];
+	char private_key[MAX_CLIENT_INPUT];
 	char *newline = "\r\n";
 	char len_buf[25];
 	char *content_length = "Content-Length:";
 	char *obuf = "POST /getcert HTTP/1.0\r\n";
-	char csr_dest[256] = "./certificates/csr/";
+	char csr_dest[MAX_CLIENT_INPUT + 25] = "./certificates/csr/";
 	struct stat buf;
 
-    if (argc != 4) {
-        fprintf(stderr, "Usage: ./getcert <username> <password> <path_to_private_key>\n");
-        exit(1);
-    }
+    if (!get_inputs(ubuf, pbuf, NULL, private_key)) {
+		fprintf(stderr, "Password cannot be longer than %d characters\n", MAX_CLIENT_INPUT);
+		return 1;
+	}
 
-	//TODO: use getpass()
+	if (!is_printable(ubuf) || !is_printable(pbuf)) {
+		fprintf(stderr, "Username and password may only contain printable characters\n");
+		return 1;
+	}
 
-	//TODO: check if username or password contain a newline. this is illegal
-
-	//TODO: enforce limit on param length
-
-    strncpy(ubuf, argv[1], sizeof(ubuf)-1);
-	strncpy(pbuf, argv[2], sizeof(pbuf)-1);
-	message_len += (strlen(ubuf) + strlen(pbuf));
+    message_len += (strlen(ubuf) + strlen(pbuf));
 	
 	SSL_library_init(); /* load encryption & hash algorithms for SSL */         	
 	SSL_load_error_strings(); /* load the error strings for good error reporting */
@@ -73,7 +72,7 @@ int main(int argc, char **argv)
 
 	/* Call csr.sh */
 	// Set up dest filename
-	strncat(csr_dest, argv[1], sizeof(csr_dest) - strlen(csr_dest));
+	strncat(csr_dest, ubuf, sizeof(csr_dest) - strlen(csr_dest));
 	strcat(csr_dest, ".csr.pem");
 	printf("dest=%s\n", csr_dest);
 	int pid = fork();
@@ -81,10 +80,8 @@ int main(int argc, char **argv)
 		perror("fork failed");
 		goto out;
 	} else if (pid == 0) { // child
-		// ./csr.sh <path_to_private_key> <csr_dest> <username>
-		// ./csr.sh argv[3] <dest> argv[1]
-		execl("/bin/sh", "sh", "../scripts/csr", argv[3], csr_dest, 
-			argv[1], (char *) NULL);
+		execl("/bin/sh", "sh", "../scripts/csr.sh", private_key, csr_dest, 
+			ubuf, (char *) NULL);
 		printf("execl failed\n");
 	} else { // parent
 		waitpid(pid, &status, 0); // TODO: check return val
@@ -162,11 +159,13 @@ int main(int argc, char **argv)
 
 	close(dest);
 	SSL_CTX_free(ctx);
+	SSL_free(ssl);
 	return 0;
 
 
 out:
 	SSL_CTX_free(ctx);
+	SSL_free(ssl);
 	close(sock);
 	return 1;
 }

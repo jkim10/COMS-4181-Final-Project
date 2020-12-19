@@ -5,8 +5,10 @@ LDLIBS= -lssl -lcrypto
 c_all: getcert changepw recvmsg sendmsg
 
 getcert: getcert.o client_utils.o
+	$(CC) $(CFLAGS) getcert.o client_utils.o -o getcert  $(LDLIBS)
 	
 changepw: changepw.o client_utils.o
+	$(CC) $(CFLAGS) changepw.o client_utils.o -o changepw  $(LDLIBS)
 
 getcert.o: getcert.c client_utils.h
 

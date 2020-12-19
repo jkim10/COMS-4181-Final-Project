@@ -16,8 +16,13 @@
 
 #define SSL_ERROR -1
 #define BAD_RESPONSE -2
+#define TOO_LONG -1
+
+#define MAX_CLIENT_INPUT 512
 
 char *get_ssl_err(SSL *ssl, int err);
 int get_status_code(SSL *ssl, char *ibuf);
 void skip_headers(SSL *ssl);
 int get_sock(int port);
+int is_printable(char *str);
+int get_inputs(char username[], char password[], char new_password[], char key[]);

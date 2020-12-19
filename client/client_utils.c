@@ -61,6 +61,7 @@ int get_status_code(SSL *ssl, char *ibuf)
     }
 
     strncpy(code, ibuf + strlen("HTTP/1.0 "), 3);
+	code[3] = 0;
 	
     return atoi(code);
 
@@ -77,4 +78,65 @@ void skip_headers(SSL *ssl)
 		
 		prev = curr;
 	}
+}
+
+int is_printable(char *str)
+{
+	for (int i = 0; i < strlen(str); i++) {
+		if (str[i] < 32 || str[i] > 126)
+			return 0;
+	}
+	return 1;
+}
+
+int get_inputs(char username[], char password[], char new_password[], char key[])
+{
+
+	char *pass, *new_pass;
+	int i;
+
+	fprintf(stderr, "Username: ");
+	for (int i = 0; i < MAX_CLIENT_INPUT; i++) {
+		read(STDIN_FILENO, username+i, 1);
+		if (username[i] == '\n') {
+			username[i] = 0;
+			break;
+		}
+	}
+	printf("username read=%s\n", username);
+
+	pass = getpass("Password: ");
+	if (strlen(pass) > MAX_CLIENT_INPUT) {
+		free(pass);
+		pass = NULL;
+		return 0;
+	}
+	strncpy(password, pass, MAX_CLIENT_INPUT);
+
+	if (new_password != NULL) {
+		new_pass = getpass("New password: ");
+		if (strlen(new_pass) > MAX_CLIENT_INPUT) {
+			free(new_pass);
+			new_pass = NULL;
+			return 0;
+		}
+		strncpy(new_password, new_pass, MAX_CLIENT_INPUT);
+	}
+
+	printf("password entered: %s\n", password);
+
+	fprintf(stderr, "Path to private key: ");
+	for (i = 0; i < MAX_CLIENT_INPUT; i++) {
+		read(STDIN_FILENO, key+i, 1);
+		if (key[i] == '\n') {
+			key[i] = 0;
+			break;
+		}
+	}
+	printf("key read=%s\n", key);
+	
+	free(pass);
+	pass = NULL;
+
+	return 1;
 }
