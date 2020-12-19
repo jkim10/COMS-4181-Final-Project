@@ -59,7 +59,14 @@ public:
 		const std::string& hash = PASS_AUTH_REQ::hpw_dict.at(username);
 		PASS_AUTH_REQ::hpw_dict[username] = hash_password(sm[1].str().c_str(), hash.c_str());
 		
-		// TODO: commit hpw_dict to disk
+		std::string hpw_dict_str;
+		for (const auto& v : PASS_AUTH_REQ::hpw_dict) {
+			hpw_dict_str += v.first;
+			hpw_dict_str += " ";
+			hpw_dict_str += v.second;
+			hpw_dict_str += "\n";
+		}
+		my::set_file_contents(PASS_AUTH_REQ::HPW_FILE_PATH, hpw_dict_str);
 		
 		payload = sm.suffix();
 	}
