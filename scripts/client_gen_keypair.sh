@@ -6,14 +6,14 @@ if [ $# -ne 2 ]; then
 fi
 
 # Only create private key if it does not exist
-FILE=$2
+FILE=$1
 if test -f "$FILE"; then
     echo "$FILE exists."
 else
     # Create a private key
 	openssl genrsa -aes256 \
-        -out $2 \
-        -passout pass:$3 2048
+        -out $1 \
+        -passout pass:$2 2048
 fi
 
-chmod 400 $2
+chmod 400 $1

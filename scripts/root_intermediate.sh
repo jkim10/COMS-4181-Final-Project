@@ -9,7 +9,7 @@ fi
 mkdir root_ca
 
 # Generate configfile
-./generate_config root_config.cnf . Root root
+./generate_config.sh root_config.cnf . Root root
 mv root_config.cnf root_ca
 
 # Create directory structure
@@ -48,7 +48,7 @@ touch index.txt
 echo 1000 > serial
 
 # Generate configfile
-../../generate_config inter_config.cnf . Intermediate intermediate
+../../generate_config.sh inter_config.cnf . Intermediate intermediate
 
 # Create intermediate key
 cd ..
