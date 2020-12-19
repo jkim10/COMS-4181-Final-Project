@@ -165,7 +165,13 @@ int main()
 	static auto shutdown_the_socket = [fd = BIO_get_fd(accept_bio.get(), nullptr)]() {
 		close(fd);
 	};
-	signal(SIGINT, [](int) { shutdown_the_socket(); });
+	if (signal(SIGINT, [](int) { shutdown_the_socket(); }) == SIG_ERR) {
+		my::print_errors_and_exit("Error setting SIGINT handler");
+	}
+	
+	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+		my::print_errors_and_exit("Error setting SIGPIPE handler");
+	}
 
 	while (auto bio = my::accept_new_tcp_connection(accept_bio.get())) {
 		bio = std::move(bio)
