@@ -12,9 +12,9 @@ mkdir certs
 cd certs
 
 # Generate config file
-.././generate_config server_config.cnf ../intermediate $url server
+.././generate_config.sh server_config.cnf ../intermediate $url server
 # Also generate a config file for client certificates
-.././generate_config client_config.cnf ../intermediate tmp usr
+.././generate_config.sh client_config.cnf ../intermediate tmp usr
 
 # Create a key
 openssl genrsa -aes256 \
