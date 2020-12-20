@@ -217,6 +217,6 @@ int main(int argc, char **argv)
 
 	string encrypted_message = get_encrypted_message(recip,cert);
 	string decrypted = decrypt(cert, encrypted_message);
-	fprintf(stderr,"%s\n",decrypted.c_str());
+	fprintf(stderr,"Message:\n==========\n%s\n",decrypted.c_str());
 
 }
