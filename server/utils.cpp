@@ -88,6 +88,9 @@ std::string sign_client_csr(const std::string& csr) {
 	
 	if (pid == 0) {
 		// Child Process
+		close(STDIN_FILENO);
+		close(STDOUT_FILENO);
+		close(STDERR_FILENO); // so that nothing is printed
 		if (dup2(pipefd_out[1], STDOUT_FILENO) < 0) {
 			saved_errmsg = "sign_client_csr child dup2 stdout";
 			goto child_exit;
@@ -98,8 +101,6 @@ std::string sign_client_csr(const std::string& csr) {
 		}
 		
 		close(pipefd_out[0]);
-		close(pipefd_out[1]);
-		close(pipefd_in[0]);
 		close(pipefd_in[1]);
 		
 		char exe_path[] = "openssl";
@@ -109,7 +110,8 @@ std::string sign_client_csr(const std::string& csr) {
 			"-extensions", "usr_cert", \
 			"-days", "375", "-notext", \
 			"-md", "sha256", "-batch", \
-			"-passin", "file:serv_conf/key_pwd", \
+			"-in", "/dev/stdin", \
+			"-passin", "file:pwds/ica_pass", \
 			NULL);
 		
 		// exec failed!
@@ -119,13 +121,19 @@ std::string sign_client_csr(const std::string& csr) {
 		// close unused fds
 		close(pipefd_in[0]);
 		close(pipefd_out[1]);
-	
+
+		// write csr to child
+		const char *csr_buf = csr.c_str();
+		int len = csr.length();
+		write(pipefd_in[1], csr_buf, len);
+		close(pipefd_in[1]);
+
 		// read signed cert from child
 		std::string signed_cert;
 		char buf[1024];
 		ssize_t read_size;
-		while((read_size = read(pipefd_out[0], buf, sizeof(buf)) > 0)) {
-			signed_cert += std::string(buf, read_size);
+		while((read_size = read(pipefd_out[0], buf, sizeof(buf))) > 0) {
+			signed_cert += std::string(buf, buf + read_size);
 		}
 	
 		// close remaining fds

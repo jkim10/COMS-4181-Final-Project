@@ -32,6 +32,7 @@ chmod 500 $PWDS_DIR
 cd scripts
 ./root_intermediate.sh $PWDS_DIR/rca_pass $PWDS_DIR/ica_pass
 ./server_setup.sh $PWDS_DIR/server_pass $PWDS_DIR/ica_pass
+cp -r intermediate $INSTALL_DEST/intermediate
 mkdir -p $INSTALL_DEST/serv_conf
 cp certs/*.cert.pem $INSTALL_DEST/serv_conf/
 cp certs/*.key.pem $INSTALL_DEST/serv_conf/
