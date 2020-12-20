@@ -186,7 +186,7 @@ int UploadMessage(string message, string recipient)
 }
 
 // 1 is error, 0 is good
-int ParseMessages(string content)
+int ParseAts(string content, string &user, string &message)
 {
 	if (content.length() < 3)
 	{
@@ -212,9 +212,20 @@ int ParseMessages(string content)
 		return 1;
 	}
 
-	string recipient = content.substr(user_start, user_end - user_start);
-	string message = content.substr(user_end + 1, content.length() - user_end - 1);
-	return UploadMessage(message, recipient);
+	user = content.substr(user_start, user_end - user_start);
+	message = content.substr(user_end + 1, content.length() - user_end - 1);
+
+	return 0;
+}
+
+// 1 is error, 0 is good
+int ParseMessages(string content)
+{
+	string recipient, message;
+	int stat_code = ParseAts(content, recipient, message);
+	if (stat_code == 0)
+		return UploadMessage(message, recipient);
+	return 1;
 }
 
 string GetMessage(string recipient)
@@ -315,33 +326,10 @@ string CertstoSend(string client_cert, vector<string> recipients)
 string ParseRecvmsg(string content)
 {
 	string message = "";
-
-	if (content.length() < 4)
-	{
-		cerr << "Too short a body" << endl;
+	string recipient, client_cert;
+	int stat_code = ParseAts(content, recipient, client_cert);
+	if (stat_code == 1)
 		return "";
-	}
-	if (content[0] != '@')
-	{
-		cerr << "Lack of start @" << endl;
-		return "";
-	}
-
-	size_t user_start = 1;
-	size_t user_end = content.find("@", user_start + 1);
-	if (user_end >= content.length())
-	{
-		cerr << "Lack of end @" << endl;
-		return "";
-	}
-	else if (user_end == content.length() - 1)
-	{
-		cerr << "Lack of client certificate" << endl;
-		return "";
-	}
-
-	string recipient = content.substr(user_start, user_end - user_start);
-	string client_cert = content.substr(user_end + 1, content.length() - user_end - 1);
 	
 	if (VerifyCert(client_cert))
 	{
