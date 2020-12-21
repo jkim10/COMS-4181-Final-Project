@@ -5,6 +5,8 @@ if [ $# != 2 ]; then
     exit 1
 fi
 
+set -e
+
 sudo rm -rf intermediate/ root_ca/
 
 # Make directory
@@ -23,7 +25,7 @@ echo 1000 > serial
 
 # Create root key
 openssl genrsa -aes256 -out private/ca.key.pem \
-        -passout file:../$1 \
+        -passout file:$1 \
         4096
 chmod 400 private/ca.key.pem
 
@@ -32,7 +34,7 @@ openssl req -config root_config.cnf \
         -key private/ca.key.pem \
         -new -x509 -days 7300 -sha256 -extensions v3_ca \
         -out certs/ca.cert.pem \
-        -passout file:../$2 -passin file:../$1
+        -passin file:$1
 
 chmod 444 certs/ca.cert.pem
 
@@ -56,28 +58,28 @@ echo 1000 > serial
 cd ..
 openssl genrsa -aes256 \
         -out intermediate/private/intermediate.key.pem \
-        -passout file:../$2 4096
+        -passout file:$2 4096
 chmod 400 intermediate/private/intermediate.key.pem
 
 # Create intermediate certificate
 openssl req -config intermediate/inter_config.cnf -new -sha256 \
         -key intermediate/private/intermediate.key.pem \
         -out intermediate/csr/intermediate.csr.pem \
-        -passin file:../$2 -passout pass:intermediate_password
+        -passin file:$2
 
 echo "intermediate cert"
 
 openssl ca -config root_config.cnf -extensions v3_intermediate_ca \
-        -days 3650 -notext -md sha256 \
+        -days 3650 -notext -md sha256 -batch \
         -in intermediate/csr/intermediate.csr.pem \
         -out intermediate/certs/intermediate.cert.pem \
-        -passin file:../$1 
+        -passin file:$1
 chmod 444 intermediate/certs/intermediate.cert.pem
 
 # Verify intermediate certificate
 openssl x509 -noout -text \
         -in intermediate/certs/intermediate.cert.pem \
-        -passin file:../$2
+        -passin file:$2
 openssl verify -CAfile certs/ca.cert.pem \
         intermediate/certs/intermediate.cert.pem \
 
@@ -90,9 +92,11 @@ mv intermediate ..
 
 cd ..
 
-chmod 550 intermediate
-sudo chown root intermediate
+chmod 750 intermediate
+# sudo chown root intermediate
 # chgrp server_group intermediate
 
 chmod 500 root_ca
 sudo chown root root_ca
+
+set +e

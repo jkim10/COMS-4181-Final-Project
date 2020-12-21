@@ -99,23 +99,9 @@ void getcert(BIO *bio, const std::string& req_str) {
 	
 	std::cerr << "getcert: \n" << auth_req.str();
 	
-	/*
-	// Store CSR
-	std::string csr_filename = my::create_tmp_file(auth_req.payload);
-	
-	// Sign CSR
-	try {
-		char cmd[] = "./sign_client_csr.sh";
-		char* const args[] = {cmd, NULL};
-		//my::fork_exec(cmd, args);
-	} catch (const std::exception& ex) {
-		my::send_errors_and_throw(bio, 500, "unable to !\n");
-	}
-	
-	// TODO: Sendback Cert
-	*/
 	try {
 		const std::string signed_cert = my::sign_client_csr(auth_req.payload);
+		my::write_certificate(signed_cert, auth_req.username);
 		my::send_http_response(bio, 200, signed_cert);
 	} catch (const std::exception& ex) {
 		my::send_errors_and_throw(bio, 500, "cert signing failed!\n");
@@ -134,6 +120,7 @@ void changepw(BIO *bio, const std::string& req_str) {
 	
 	try {
 		const std::string signed_cert = my::sign_client_csr(auth_req.payload);
+		my::write_certificate(signed_cert, auth_req.username);
 		my::send_http_response(bio, 200, signed_cert);
 	} catch (const std::exception& ex) {
 		my::send_errors_and_throw(bio, 500, "cert signing failed!\n");
@@ -142,8 +129,13 @@ void changepw(BIO *bio, const std::string& req_str) {
 
 } // namespace my
 
-int main()
+int main(int argc, char* argv[])
 {
+	if (argc != 2) {
+		std::cerr << "Usage: " << argv[0] << " <FQDN>" << std::endl;
+		return 1;
+	}
+	
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 	SSL_library_init();
 	SSL_load_error_strings();
@@ -153,10 +145,14 @@ int main()
 	SSL_CTX_set_min_proto_version(ctx.get(), TLS1_2_VERSION);
 #endif
 
-	if (SSL_CTX_use_certificate_file(ctx.get(), "server-certificate.pem", SSL_FILETYPE_PEM) <= 0) {
+	const std::string fdqn (argv[1]);
+	const std::string serv_cert_path = "serv_conf/" + fdqn + ".cert.pem";
+	if (SSL_CTX_use_certificate_file(ctx.get(), serv_cert_path.c_str(), SSL_FILETYPE_PEM) <= 0) {
 		my::print_errors_and_exit("Error loading server certificate");
 	}
-	if (SSL_CTX_use_PrivateKey_file(ctx.get(), "server-private-key.pem", SSL_FILETYPE_PEM) <= 0) {
+	
+	const std::string serv_key_path = "serv_conf/" + fdqn + ".key.pem";
+	if (SSL_CTX_use_PrivateKey_file(ctx.get(), serv_key_path.c_str(), SSL_FILETYPE_PEM) <= 0) {
 		my::print_errors_and_exit("Error loading server private key");
 	}
 

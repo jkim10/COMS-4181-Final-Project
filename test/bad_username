@@ -1,0 +1,31 @@
+#!/usr/bin/expect -f
+
+set timeout -1
+spawn ../client/getcert
+match_max 100000
+expect -exact "Username: "
+send -- "bad\r"
+expect -exact "bad\r
+Password: "
+send -- "Cardin_pwns\r"
+expect -exact "\r
+Path to private key: "
+send -- "addleness.key.pem\r"
+expect "Failed with response code 401"
+expect eof
+
+spawn ../client/changepw
+match_max 100000
+expect -exact "Username: "
+send -- "bad\r"
+expect -exact "bad\r
+Password: "
+send -- "Cardin_pwns\r"
+expect -exact "\r
+New password: "
+send -- "new\r"
+expect -exact "\r
+Path to private key: "
+send -- "addleness.key.pem\r"
+expect "Failed with response code 401"
+expect eof

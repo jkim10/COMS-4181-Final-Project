@@ -1,0 +1,36 @@
+#!/usr/bin/expect -f
+
+set timeout -1
+spawn ../client/changepw
+match_max 100000
+expect -exact "Username: "
+send -- "addleness\r"
+expect -exact "addleness\r
+Password: "
+send -- "Cardin_pwns\r"
+expect -exact "\r
+New password: "
+send -- "new\r"
+expect -exact "\r
+Path to private key: "
+send -- "addleness.key.pem\r"
+expect "Wrote certificate to ./certificates/addleness.cert.pem"
+expect eof
+
+# Now change password back 
+set timeout -1
+spawn ../client/changepw
+match_max 100000
+expect -exact "Username: "
+send -- "addleness\r"
+expect -exact "addleness\r
+Password: "
+send -- "new\r"
+expect -exact "\r
+New password: "
+send -- "Cardin_pwns\r"
+expect -exact "\r
+Path to private key: "
+send -- "addleness.key.pem\r"
+expect "Wrote certificate to ./certificates/addleness.cert.pem"
+expect eof

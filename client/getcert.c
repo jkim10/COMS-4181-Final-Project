@@ -146,7 +146,6 @@ int main(int argc, char **argv)
 	strncat(filename, ubuf, sizeof(filename) - strlen("./certificates"));
 	strcat(filename, ".cert.pem");
 	int dest = open(filename, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR); // if file already exists it will be overwritten
-	printf("dest=%d\n", dest);
 	if (dest < 0 ){
 		perror("Failed to create certificate file");
 		goto out;

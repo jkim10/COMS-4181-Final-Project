@@ -1,0 +1,29 @@
+#!/usr/bin/expect -f
+
+set timeout -1
+spawn ../client/getcert
+match_max 100000
+expect -exact "Username: "
+send -- "addleness\r"
+expect -exact "addleness\r
+Password: "
+send -- "Cardin_pwns\r"
+expect -exact "\r
+Path to private key: "
+send -- "test.sh\r"
+expect "../scripts/csr.sh: 18: \[: unable: unexpected operator\rCSR creation failed"
+
+spawn ../client/changepw
+match_max 100000
+expect -exact "Username: "
+send -- "addleness\r"
+expect -exact "addleness\r
+Password: "
+send -- "Cardin_pwns\r"
+expect -exact "\r
+New password: "
+send -- "new\r"
+expect -exact "\r
+Path to private key: "
+send -- "test.sh\r"
+expect "../scripts/csr.sh: 18: \[: unable: unexpected operator\rCSR creation failed"
