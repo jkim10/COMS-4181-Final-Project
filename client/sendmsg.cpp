@@ -363,7 +363,7 @@ string sign(string cert, string pKey, string message){
     EVP_PKEY *skey = NULL;
     CMS_ContentInfo *cms = NULL;
 	FILE* tmp = tmpfile();
-	string verified = "";
+	string signed_message = "";
 	int c;
 
     /*
@@ -420,13 +420,13 @@ string sign(string cert, string pKey, string message){
 
     rewind(tmp);
 	while ((c = getc(tmp)) != EOF){
-		verified += c;
+		signed_message += c;
 	}
 
  err:
 
-    if (verified == "") {
-        fprintf(stderr, "Error Decrypting Data\n");
+    if (signed_message == "") {
+        fprintf(stderr, "Error Signing Data\n");
         ERR_print_errors_fp(stderr);
     }
 
@@ -437,7 +437,7 @@ string sign(string cert, string pKey, string message){
     BIO_free(out);
 	BIO_free(key);
     BIO_free(tbio);
-    return verified;
+    return signed_message;
 }
 
 int main(int argc, char **argv)
@@ -470,7 +470,6 @@ int main(int argc, char **argv)
 	string sender_cert = ReadFiletoString(cert_path.c_str());
 	string pKey = ReadFiletoString(pKey_path.c_str());
 
-	if(!matchCertPkey(sender_cert,pKey)){exit(1);}
 	// Make Request to Server for recipient certs
 	string cert_resp = get_recip_certs(recips,content_length, sender_cert);
 
@@ -499,6 +498,10 @@ int main(int argc, char **argv)
 				string encrypted = encrypt(cert,message);
 				string resp = send_encrypted_message(recip, encrypted, cert); // Comment this out and uncomment below when ready
 				// string signed_message = sign(sender_cert, pKey, encrypted);
+				// if(signed_message.length() == 0){
+				// 	fprintf(stderr,"Could not sign certificate with provided key and certificate\n");
+				// 	exit(1);
+				// }
 				// string resp = send_encrypted_message(recip, signed_message, cert);
 			}
 		}

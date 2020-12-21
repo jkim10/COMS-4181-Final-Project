@@ -369,6 +369,10 @@ int main(int argc, char **argv)
 	// if(encrypted_message.length() == 0) {exit(1);}
 	// string decrypted = decrypt(cert, encrypted_message);
 	string decrypted = decrypt(cert, signed_message);
+	if(decrypted.length()==0){
+		fprintf(stderr,"Could not decrypt. Exiting.\n");
+		exit(1);
+	}
 	fprintf(stderr,"============\nMessage\n============\n%s\n",decrypted.c_str());
 
 }
