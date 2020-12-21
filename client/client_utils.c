@@ -95,7 +95,9 @@ int get_inputs(char username[], char password[], char new_password[], char key[]
 	int i = 0;
 
 	fprintf(stderr, "Username: ");
-	for (i = 0; i < MAX_CLIENT_INPUT; i++) {
+	for (i = 0; i <= MAX_CLIENT_INPUT; i++) {
+		if (i == MAX_CLIENT_INPUT)
+			return 0;
 		read(STDIN_FILENO, username+i, 1);
 		if (username[i] == '\n') {
 			username[i] = 0;
@@ -124,7 +126,9 @@ int get_inputs(char username[], char password[], char new_password[], char key[]
 	}
 
 	fprintf(stderr, "Path to private key: ");
-	for (i = 0; i < MAX_CLIENT_INPUT; i++) {
+	for (i = 0; i <= MAX_CLIENT_INPUT; i++) {
+		if (i == MAX_CLIENT_INPUT)
+			return 0;
 		read(STDIN_FILENO, key+i, 1);
 		if (key[i] == '\n') {
 			key[i] = 0;

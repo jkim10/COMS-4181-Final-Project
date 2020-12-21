@@ -1,0 +1,7 @@
+#!/usr/bin/expect -f
+
+# pass in an invalid cert
+
+# pass a file that is not a certificate
+
+# pass a path that does not exist
