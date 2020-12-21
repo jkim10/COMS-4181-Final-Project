@@ -1,0 +1,9 @@
+Sendmsg: 
+1. Non-exist cert
+    - ./sendmsg client.pem addleness (single recipient)
+    - ./sendmsg client.pem addleness analects (multiple recipients)
+2. Invalid recipient name(s)
+    - ./sendmsg client.cert.pem addle (single recipient)
+    - ./sendmsg client.cert.pem a#a analects (multiple recipients/partial invalid)
+    - ./sendmsg client.cert.pem !// _analects (multiple recipients/all invalid) (bash: !//: event not found)
+3. (Should we limit the number of recipients in a single sendmsg?)
