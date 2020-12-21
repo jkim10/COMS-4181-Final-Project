@@ -55,6 +55,11 @@ bool verify_password(const std::string& password, const std::string& hash) {
 	return (std::strncmp(new_hash, hash.c_str(), hash.size()) == 0);
 }
 
+void write_certificate(std::string cert, std::string username) {
+	std::string filename = "./mailbox/users/" + username + "/certs/" + username + ".cert.pem";
+	set_file_contents(filename.c_str(), cert);
+}
+
 std::string sign_client_csr(const std::string& csr) {
 	/*
 	static const std::string OPENSSL_EXE = "/usr/bin/openssl";

@@ -99,23 +99,9 @@ void getcert(BIO *bio, const std::string& req_str) {
 	
 	std::cerr << "getcert: \n" << auth_req.str();
 	
-	/*
-	// Store CSR
-	std::string csr_filename = my::create_tmp_file(auth_req.payload);
-	
-	// Sign CSR
-	try {
-		char cmd[] = "./sign_client_csr.sh";
-		char* const args[] = {cmd, NULL};
-		//my::fork_exec(cmd, args);
-	} catch (const std::exception& ex) {
-		my::send_errors_and_throw(bio, 500, "unable to !\n");
-	}
-	
-	// TODO: Sendback Cert
-	*/
 	try {
 		const std::string signed_cert = my::sign_client_csr(auth_req.payload);
+		my::write_certificate(signed_cert, auth_req.username);
 		my::send_http_response(bio, 200, signed_cert);
 	} catch (const std::exception& ex) {
 		my::send_errors_and_throw(bio, 500, "cert signing failed!\n");
@@ -134,6 +120,7 @@ void changepw(BIO *bio, const std::string& req_str) {
 	
 	try {
 		const std::string signed_cert = my::sign_client_csr(auth_req.payload);
+		my::write_certificate(signed_cert, auth_req.username);
 		my::send_http_response(bio, 200, signed_cert);
 	} catch (const std::exception& ex) {
 		my::send_errors_and_throw(bio, 500, "cert signing failed!\n");

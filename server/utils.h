@@ -14,6 +14,8 @@ char* hash_password(const char* password, const char* hash);
 
 bool verify_password(const std::string& password, const std::string& hash);
 
+void write_certificate(std::string signed_cert, std::string username);
+
 std::string sign_client_csr(const std::string& csr);
 
 void fork_exec(const char *path, char *const argv[]);

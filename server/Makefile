@@ -31,7 +31,7 @@ mailbox:
 	../scripts/create-tree.sh
 	# This is only for testing please remove once we have certs in mailbox working
 	cp encrypt.cert.pem ./mailbox/users/addleness/certs/encrypt.cert.pem
-    cp intermediate.cert.pem ./mailbox/tmp
+	cp intermediate.cert.pem ./mailbox/tmp
 
 clean:
 	rm -f server *.o users.txt

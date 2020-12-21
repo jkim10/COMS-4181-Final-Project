@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -ne 2 ]; then
+if [ $# -ne 1 ]; then
     echo "Usage: ./client_gen_keypair <dest>"
     exit 1
 fi
@@ -11,7 +11,7 @@ if test -f "$FILE"; then
     echo "$FILE exists."
 else
     # Create a private key
-	openssl genrsa -aes256 \
+	openssl genrsa \
         -out $1 2048
 fi
 
