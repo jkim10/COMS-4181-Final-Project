@@ -241,13 +241,16 @@ int ParseMessages(string content)
 {
 	string recipient, message;
 	int stat_code = ParseAts(content, recipient, message);
-	if (stat_code == 0)
+	if (stat_code == 0 && isValidRecipient(recipient))
 		return UploadMessage(message, recipient);
 	return 1;
 }
 
 string GetMessage(string recipient)
 {
+	if (!isValidRecipient(recipient))
+		return "";
+
 	string user_path = "./mailbox/users/" + recipient + "/messages";
 	DIR *dir = opendir(user_path.c_str());
 	if (dir == NULL)
@@ -343,16 +346,34 @@ string CertstoSend(string client_cert, vector<string> recipients)
 	return encrypt_certs;
 }
 
+string ParseCN(string cert_pem)
+{
+	BIO *b = BIO_new(BIO_s_mem());
+	BIO_puts(b, cert_pem.c_str());
+	X509 *subject = PEM_read_bio_X509(b, NULL, NULL, NULL);
+	X509_NAME *subject_name = X509_get_subject_name(subject);
+
+	char common_name[256];
+	X509_NAME_get_text_by_NID(subject_name, NID_commonName, common_name, sizeof(common_name));
+
+	return common_name;
+}
+
 string ParseRecvmsg(string content)
 {
 	string message = "";
-	string recipient, client_cert;
-	int stat_code = ParseAts(content, recipient, client_cert);
-	if (stat_code == 1)
-		return "";
+	string recipient;
+	string client_cert = content;
+
+	//int stat_code = ParseAts(content, recipient, client_cert);
+	//if (stat_code == 1)
+	//	return "";
 	
 	if (VerifyCert(client_cert))
 	{
+		recipient = ParseCN(client_cert);
+		//cout << recipient << endl;
+		//recipient = "addleness";
 		message = GetMessage(recipient);
 	}
 
