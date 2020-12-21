@@ -91,19 +91,19 @@ int is_printable(char *str)
 
 int get_inputs(char username[], char password[], char new_password[], char key[])
 {
-
 	char *pass, *new_pass;
-	int i;
+	int i = 0;
 
 	fprintf(stderr, "Username: ");
-	for (int i = 0; i < MAX_CLIENT_INPUT; i++) {
+	for (i = 0; i < MAX_CLIENT_INPUT; i++) {
 		read(STDIN_FILENO, username+i, 1);
 		if (username[i] == '\n') {
 			username[i] = 0;
 			break;
 		}
 	}
-	printf("username read=%s\n", username);
+	if (username[i] != 0)
+		return 0;
 
 	pass = getpass("Password: ");
 	if (strlen(pass) > MAX_CLIENT_INPUT) {
@@ -123,8 +123,6 @@ int get_inputs(char username[], char password[], char new_password[], char key[]
 		strncpy(new_password, new_pass, MAX_CLIENT_INPUT);
 	}
 
-	printf("password entered: %s\n", password);
-
 	fprintf(stderr, "Path to private key: ");
 	for (i = 0; i < MAX_CLIENT_INPUT; i++) {
 		read(STDIN_FILENO, key+i, 1);
@@ -133,7 +131,8 @@ int get_inputs(char username[], char password[], char new_password[], char key[]
 			break;
 		}
 	}
-	printf("key read=%s\n", key);
+	if (key[i] != 0)
+		return 0;
 	
 	free(pass);
 	pass = NULL;
