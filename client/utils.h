@@ -34,3 +34,7 @@ string ParseSendmsg(string content, vector<string> &recipients);
 string CertstoSend(string client_cert, vector<string> recipients);
 
 string ParseRecvmsg(string content);
+
+string ParseSenderCert(string content);
+
+string ParseRMMessage(string content);

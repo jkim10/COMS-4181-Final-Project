@@ -232,6 +232,23 @@ string ParseSendmsg(string content, vector<string> &recipients)
 	return client_cert;
 }
 
+string ParseSenderCert(string content)
+{
+	size_t found = content.find("-----END CERTIFICATE-----") + 25 + 1;
+	string client_cert = content.substr(0, found);
+	return client_cert;
+}
+
+string ParseRMMessage(string content)
+{
+	size_t found = content.find("-----END CERTIFICATE-----") + 25 + 1;
+	if(content.length() <= 25){
+		return "";
+	}
+	string message = content.substr(found);
+	return message;
+}
+
 string CertstoSend(string client_cert, vector<string> recipients)
 {
 	string encrypt_certs;
@@ -259,3 +276,4 @@ string ParseRecvmsg(string content)
 	}
 	return message;
 }
+
