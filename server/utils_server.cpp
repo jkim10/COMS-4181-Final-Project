@@ -96,6 +96,15 @@ int SigVerify(const char* cert_pem, const char* intermediate_pem)
 
 bool isValidCert(const char* client_cert_path, const char* intermediate_cert_path)
 {
+	SSL_CTX *ctx = SSL_CTX_new(TLS_method());
+	if (SSL_CTX_load_verify_locations(ctx, client_cert_path, nullptr) != 1)
+	{
+		cerr << "Invalid cert: possibly not even a cert" << endl;
+		SSL_CTX_free(ctx);
+		return false;
+	}
+	SSL_CTX_free(ctx);
+
 	string client_cert = ReadFiletoString(client_cert_path);
 	string intermediate_cert = ReadFiletoString(intermediate_cert_path);
 
