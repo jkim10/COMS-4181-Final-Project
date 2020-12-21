@@ -1,5 +1,7 @@
 #include "utils_server.h"
 
+#define USERNAME_MAX 255
+
 string ReadFiletoString(const char *filename)
 {
 	ifstream ifile(filename);
@@ -20,6 +22,22 @@ void WriteStringtoFile(string file, string filename)
 
 bool isValidRecipient(string recipient)
 {
+	if (recipient.length() == 0 || recipient.length() > USERNAME_MAX)
+	{
+		return false;
+	} 
+	if (!isalpha(recipient[0]))
+	{
+		return false;
+	}
+	for (char const& c : recipient)
+	{
+		if (!isalpha(c) && !isdigit(c) && c != '+' && c != '-' && c != '_')
+		{
+			return false;
+		}
+	}
+
 	string user_path = "./mailbox/users/" + recipient;
 	if (access(user_path.c_str(), F_OK) == -1)
 	{
@@ -186,7 +204,7 @@ int UploadMessage(string message, string recipient)
 }
 
 // 1 is error, 0 is good
-int ParseMessages(string content)
+int ParseAts(string content, string &user, string &message)
 {
 	if (content.length() < 3)
 	{
@@ -208,17 +226,31 @@ int ParseMessages(string content)
 	}
 	else if (user_end == content.length() - 1)
 	{
-		cerr << "Empty message" << endl;
+		cerr << "Empty message/Invalid cert" << endl;
 		return 1;
 	}
 
-	string recipient = content.substr(user_start, user_end - user_start);
-	string message = content.substr(user_end + 1, content.length() - user_end - 1);
-	return UploadMessage(message, recipient);
+	user = content.substr(user_start, user_end - user_start);
+	message = content.substr(user_end + 1, content.length() - user_end - 1);
+
+	return 0;
+}
+
+// 1 is error, 0 is good
+int ParseMessages(string content)
+{
+	string recipient, message;
+	int stat_code = ParseAts(content, recipient, message);
+	if (stat_code == 0 && isValidRecipient(recipient))
+		return UploadMessage(message, recipient);
+	return 1;
 }
 
 string GetMessage(string recipient)
 {
+	if (!isValidRecipient(recipient))
+		return "";
+
 	string user_path = "./mailbox/users/" + recipient + "/messages";
 	DIR *dir = opendir(user_path.c_str());
 	if (dir == NULL)
@@ -268,7 +300,9 @@ string GetMessage(string recipient)
 		return "";
 	}
 
-	return ReadFiletoString(message_path.c_str());
+	string message = ReadFiletoString(message_path.c_str());
+	remove(message_path.c_str());
+	return message;
 }
 
 string ParseSendmsg(string content, vector<string> &recipients)
@@ -312,39 +346,34 @@ string CertstoSend(string client_cert, vector<string> recipients)
 	return encrypt_certs;
 }
 
+string ParseCN(string cert_pem)
+{
+	BIO *b = BIO_new(BIO_s_mem());
+	BIO_puts(b, cert_pem.c_str());
+	X509 *subject = PEM_read_bio_X509(b, NULL, NULL, NULL);
+	X509_NAME *subject_name = X509_get_subject_name(subject);
+
+	char common_name[256];
+	X509_NAME_get_text_by_NID(subject_name, NID_commonName, common_name, sizeof(common_name));
+
+	return common_name;
+}
+
 string ParseRecvmsg(string content)
 {
 	string message = "";
+	string recipient;
+	string client_cert = content;
 
-	if (content.length() < 4)
-	{
-		cerr << "Too short a body" << endl;
-		return "";
-	}
-	if (content[0] != '@')
-	{
-		cerr << "Lack of start @" << endl;
-		return "";
-	}
-
-	size_t user_start = 1;
-	size_t user_end = content.find("@", user_start + 1);
-	if (user_end >= content.length())
-	{
-		cerr << "Lack of end @" << endl;
-		return "";
-	}
-	else if (user_end == content.length() - 1)
-	{
-		cerr << "Lack of client certificate" << endl;
-		return "";
-	}
-
-	string recipient = content.substr(user_start, user_end - user_start);
-	string client_cert = content.substr(user_end + 1, content.length() - user_end - 1);
+	//int stat_code = ParseAts(content, recipient, client_cert);
+	//if (stat_code == 1)
+	//	return "";
 	
 	if (VerifyCert(client_cert))
 	{
+		recipient = ParseCN(client_cert);
+		//cout << recipient << endl;
+		//recipient = "addleness";
 		message = GetMessage(recipient);
 	}
 
