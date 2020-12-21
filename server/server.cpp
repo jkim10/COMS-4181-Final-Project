@@ -195,8 +195,13 @@ int main()
 				// TODO: sendmsg
 				vector<string> recipients;
 				string client_cert = ParseSendmsg(request.body, recipients);
-				string encrypt_cert = CertstoSend(client_cert, recipients);
-				my::send_http_response(bio.get(), 200, encrypt_cert);
+				if (client_cert == "")
+					my::send_errors_and_throw(bio.get(), 400, "Invalid request");
+				else
+				{
+					string encrypt_cert = CertstoSend(client_cert, recipients);
+					my::send_http_response(bio.get(), 200, encrypt_cert);
+				}
 			} else if (request.endpoint == "upload") {
 				// TODO: Takes in a recipient with an encrypted message
 				// Header: POST /upload HTTP/1.1\r\n

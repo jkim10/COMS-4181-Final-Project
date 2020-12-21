@@ -208,7 +208,7 @@ int ParseAts(string content, string &user, string &message)
 	}
 	else if (user_end == content.length() - 1)
 	{
-		cerr << "Empty message" << endl;
+		cerr << "Empty message/Invalid cert" << endl;
 		return 1;
 	}
 
