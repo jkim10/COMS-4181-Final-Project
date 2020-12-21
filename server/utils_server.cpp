@@ -1,5 +1,7 @@
 #include "utils_server.h"
 
+#define USERNAME_MAX 255
+
 string ReadFiletoString(const char *filename)
 {
 	ifstream ifile(filename);
@@ -20,6 +22,22 @@ void WriteStringtoFile(string file, string filename)
 
 bool isValidRecipient(string recipient)
 {
+	if (recipient.length() == 0 || recipient.length() > USERNAME_MAX)
+	{
+		return false;
+	} 
+	if (!isalpha(recipient[0]))
+	{
+		return false;
+	}
+	for (char const& c : recipient)
+	{
+		if (!isalpha(c) && !isdigit(c) && c != '+' && c != '-' && c != '_')
+		{
+			return false;
+		}
+	}
+
 	string user_path = "./mailbox/users/" + recipient;
 	if (access(user_path.c_str(), F_OK) == -1)
 	{
@@ -279,7 +297,9 @@ string GetMessage(string recipient)
 		return "";
 	}
 
-	return ReadFiletoString(message_path.c_str());
+	string message = ReadFiletoString(message_path.c_str());
+	remove(message_path.c_str());
+	return message;
 }
 
 string ParseSendmsg(string content, vector<string> &recipients)
