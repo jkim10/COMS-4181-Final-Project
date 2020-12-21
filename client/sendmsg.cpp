@@ -15,7 +15,7 @@ extern "C"
 	#include "client_utils.h"
 }
 using namespace std;
-string get_recip_certs(vector<string> recips, int message_len, string cert_path){
+string get_recip_certs(vector<string> recips, int message_len, string cert){
 	SSL_CTX *ctx;
 	SSL *ssl;
 	const SSL_METHOD *meth;
@@ -83,7 +83,6 @@ string get_recip_certs(vector<string> recips, int message_len, string cert_path)
 	SSL_write(ssl, cert_req.c_str(), cert_req.length());
 	SSL_write(ssl, content_length.c_str(), content_length.length());
 	// TODO: when we have certificates setup, uncomment this and replace duckduckgo
-	string cert = ReadFiletoString(cert_path.c_str());
 	// string cert = ReadFiletoString("./duckduckgo.pem");
 	message_len += cert.length();
 	SSL_write(ssl, to_string(message_len).c_str(), to_string(message_len).length());
@@ -97,11 +96,10 @@ string get_recip_certs(vector<string> recips, int message_len, string cert_path)
 
 	/* Get Response */
 	int response_code = get_status_code(ssl, ibuf);
-	printf("Successfully received recipient certificates!\n");
 	// there are more specific values if we want to return nicer error messages...
 	if (response_code != 200)
 		goto out;
-
+	printf("Successfully received recipient certificates!\n");
 	// Read past the rest of the headers
 	skip_headers(ssl);
 	string body = "";
@@ -121,7 +119,9 @@ out:
 	return "";		
 }
 
-
+/*
+	Encrypts and Sign Message
+*/
 string encrypt(string cert, string message){
 	BIO *in = NULL, *out = NULL, *tbio = NULL;
     X509 *rcert = NULL;
@@ -209,7 +209,7 @@ string encrypt(string cert, string message){
     return encrypted;
 }
 
-string send_encrypted_message(string recip, string encrypted){
+string send_encrypted_message(string recip, string encrypted, string sender_cert){
 	SSL_CTX *ctx;
 	SSL *ssl;
 	const SSL_METHOD *meth;
@@ -223,7 +223,7 @@ string send_encrypted_message(string recip, string encrypted){
 	string cert_req = "POST /upload HTTP/1.0\r\n";
 	string end = "\r\n\r\n";
 	int message_len = encrypted.length();
-	message_len += recip.length() + 2; // Recip + 2 "@" for parsing
+	message_len += recip.length() + 2 + sender_cert.length(); // Recip + 2 "@" for parsing + sender cert
 
 	/*
 	 Start Connection to Server
@@ -284,6 +284,7 @@ string send_encrypted_message(string recip, string encrypted){
 	SSL_write(ssl, "@",1);
 	SSL_write(ssl,recip.c_str(),recip.length());
 	SSL_write(ssl, "@",1);
+	SSL_write(ssl, sender_cert.c_str(), sender_cert.length());
 	SSL_write(ssl, encrypted.c_str(), encrypted.length());
 
 
@@ -313,11 +314,137 @@ out:
 	return "";
 }
 
+bool matchCertPkey(string cert, string pKey){
+    /*
+     * On OpenSSL 1.0.0 and later only:
+     * for streaming set CMS_STREAM
+     */
+	int isMatch = 1;
+	int rc;
+    OpenSSL_add_all_algorithms();
+    ERR_load_crypto_strings();
+
+    /* Read in recipient certificate */
+    BIO *cert_bio = BIO_new(BIO_s_mem());
+	BIO_puts(cert_bio, cert.c_str());
+
+
+
+    X509 *rcert = PEM_read_bio_X509(cert_bio, NULL, 0, NULL);
+
+	BIO *key = BIO_new(BIO_s_mem());
+	BIO_puts(key, pKey.c_str());
+    EVP_PKEY* pkey = PEM_read_bio_PrivateKey(key, NULL, 0, NULL);
+
+	if (!cert_bio || !key || !pkey)
+        goto err;
+
+	rc = X509_check_private_key(rcert,pkey);
+	if(rc == 0){
+		long err = ERR_get_error();
+		char err_buf[1000];
+		fprintf(stderr, "Private key did not match. Error Code: \n%d\n", EVP_PKEY_size(pkey));
+		isMatch = 0;
+	}
+
+    
+
+err:
+    X509_free(rcert);
+    BIO_free(cert_bio);
+    BIO_free(key);
+	EVP_PKEY_free(pkey);
+    return isMatch;
+}
+
+string sign(string cert, string pKey, string message){
+	BIO *in = NULL, *out = NULL, *tbio = NULL, *key = NULL;
+    X509 *scert = NULL;
+    EVP_PKEY *skey = NULL;
+    CMS_ContentInfo *cms = NULL;
+	FILE* tmp = tmpfile();
+	string signed_message = "";
+	int c;
+
+    /*
+     * For simple S/MIME signing use CMS_DETACHED. On OpenSSL 1.0.0 only: for
+     * streaming detached set CMS_DETACHED|CMS_STREAM for streaming
+     * non-detached set CMS_STREAM
+     */
+    int flags = CMS_DETACHED | CMS_STREAM;
+
+    OpenSSL_add_all_algorithms();
+    ERR_load_crypto_strings();
+
+    /* Read in signer certificate and private key */
+    tbio = BIO_new(BIO_s_mem());
+	BIO_puts(tbio, cert.c_str());
+
+    if (!tbio)
+        goto err;
+
+    scert = PEM_read_bio_X509(tbio, NULL, 0, NULL);
+
+    BIO_reset(tbio);
+
+    key = BIO_new_file("client.key.pem","r");
+    skey = PEM_read_bio_PrivateKey(key, NULL, 0, NULL);
+
+    if (!scert || !skey)
+        goto err;
+
+    /* Open content being signed */
+
+    in = BIO_new(BIO_s_mem());
+	BIO_puts(in, message.c_str());
+
+    if (!in)
+        goto err;
+
+    /* Sign content */
+    cms = CMS_sign(scert, skey, NULL, in, flags);
+
+    if (!cms)
+        goto err;
+
+    out = BIO_new_fp(tmp,BIO_CLOSE);
+    if (!out)
+        goto err;
+
+    if (!(flags & CMS_STREAM))
+        BIO_reset(in);
+
+    /* Write out S/MIME message */
+    if (!SMIME_write_CMS(out, cms, in, flags))
+        goto err;
+
+    rewind(tmp);
+	while ((c = getc(tmp)) != EOF){
+		signed_message += c;
+	}
+
+ err:
+
+    if (signed_message == "") {
+        fprintf(stderr, "Error Signing Data\n");
+        ERR_print_errors_fp(stderr);
+    }
+
+    CMS_ContentInfo_free(cms);
+    X509_free(scert);
+    EVP_PKEY_free(skey);
+    BIO_free(in);
+    BIO_free(out);
+	BIO_free(key);
+    BIO_free(tbio);
+    return signed_message;
+}
+
 int main(int argc, char **argv)
 {
 	
-    if (argc < 2) {
-        fprintf(stderr, "Usage: ./sendmsg <path/to/cert> <recipients>\n");
+    if (argc < 3) {
+        fprintf(stderr, "Usage: ./sendmsg <path/to/cert> <path/to/privatekey> <recipients>\n");
         exit(1);
     }
 	
@@ -325,7 +452,8 @@ int main(int argc, char **argv)
 	vector <string> recips;
 	int content_length = 0;
 	string cert_path = argv[1];
-	for(int i=2; i < argc; i++){
+	string pKey_path = argv[2];
+	for(int i=3; i < argc; i++){
 		recips.push_back(argv[i]);
 		content_length += strlen(argv[i]);
 		content_length += 1;
@@ -339,8 +467,11 @@ int main(int argc, char **argv)
 		message += '\n';
 	}
 
+	string sender_cert = ReadFiletoString(cert_path.c_str());
+	string pKey = ReadFiletoString(pKey_path.c_str());
+
 	// Make Request to Server for recipient certs
-	string cert_resp = get_recip_certs(recips,content_length, cert_path);
+	string cert_resp = get_recip_certs(recips,content_length, sender_cert);
 
 	// Upload Messages
 	if(cert_resp.length() > 2){ // At least one valid cert
@@ -365,8 +496,13 @@ int main(int argc, char **argv)
 			//Encrypt to Certificate and sign
 			if(cert.length() > 0){
 				string encrypted = encrypt(cert,message);
-				// Send Request (Note if we want all to fail on one failure, then we do outside)
-				string resp = send_encrypted_message(recip, encrypted);
+				string resp = send_encrypted_message(recip, encrypted, cert); // Comment this out and uncomment below when ready
+				// string signed_message = sign(sender_cert, pKey, encrypted);
+				// if(signed_message.length() == 0){
+				// 	fprintf(stderr,"Could not sign certificate with provided key and certificate\n");
+				// 	exit(1);
+				// }
+				// string resp = send_encrypted_message(recip, signed_message, cert);
 			}
 		}
 	}
