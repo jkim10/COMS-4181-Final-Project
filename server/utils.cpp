@@ -105,12 +105,8 @@ std::string sign_client_csr(const std::string& csr) {
 		close(pipefd_in[1]);
 
 		// write to temp file so that openssl can read
-		int read_size, res;
-		char buf[1024];
-		int tmp_file = open(tmp.c_str(), O_CREAT | O_WRONLY);
-		while((read_size = read(STDIN_FILENO, buf, sizeof(buf))) > 0) {
-			res = write(tmp_file, buf, read_size);
-		}
+		int tmp_file = open(tmp.c_str(), O_CREAT | O_EXCL | O_WRONLY, S_IRWXU);
+		my::set_file_contents(tmp.c_str(), csr);
 
 		close(tmp_file);
 
