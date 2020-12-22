@@ -18,12 +18,12 @@ res=$(./input_too_long)
 res=$(./invalid_private_key)
 
 # sendmsg/rcvmsg
-#res=$(./nonexistent_cert)
-#res=$(./invalid_recips)
+res=$(./nonexistent_cert)
+res=$(./invalid_recips)
 
 # Generate a certificate using another CA
-# ./evil_certificate.sh
-#res=$(./other_ca)
+./evil_certificate.sh
+res=$(./other_ca)
 
 set +e
 

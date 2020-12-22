@@ -1,7 +1,43 @@
 #!/usr/bin/expect -f
 
-# pass in an invalid cert
-
 # pass a file that is not a certificate
+set timeout -1
+spawn ../client/sendmsg test.sh addleness.key.pem whaledom
+match_max 100000
+send -- "hello\r"
+expect -exact "hello\r
+"
+send -- "\x04"
+expect "Failed with code=400"
+expect eof
+
+spawn ../client/recvmsg test.sh addleness.key.pem
+match_max 100000
+send -- "hello\r"
+expect -exact "hello\r
+"
+send -- "\x04"
+expect "Failed with code=400"
+expect "No valid messages"
+expect eof
 
 # pass a path that does not exist
+set timeout -1
+spawn ../client/sendmsg nowhere addleness.key.pem whaledom
+match_max 100000
+send -- "hello\r"
+expect -exact "hello\r
+"
+send -- "\x04"
+expect "Failed with code=400"
+expect eof
+
+spawn ../client/recvmsg nowhere addleness.key.pem
+match_max 100000
+send -- "hello\r"
+expect -exact "hello\r
+"
+send -- "\x04"
+expect "Failed with code=400"
+expect "No valid messages"
+expect eof

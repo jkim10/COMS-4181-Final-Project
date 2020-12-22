@@ -1,0 +1,23 @@
+#!/usr/bin/expect -f
+
+# sendmsg
+set timeout -1
+spawn ../client/sendmsg certificates/addleness-evil.cert.pem addleness.key.pem whaledom
+match_max 100000
+send -- "hello\r"
+expect -exact "hello\r
+"
+send -- "\x04"
+expect "Failed with code=400"
+expect eof
+
+# recvmsg
+spawn ../client/recvmsg certificates/addleness-evil.cert.pem addleness.key.pem
+match_max 100000
+send -- "hello\r"
+expect -exact "hello\r
+"
+send -- "\x04"
+expect "Failed with code=400"
+expect "No valid messages"
+expect eof
