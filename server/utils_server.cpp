@@ -53,7 +53,7 @@ bool isValidRecipient(string recipient)
 
 string ReturnCert(string recipient)
 {
-	string cert_path = "./mailbox/users/" + recipient + "/certs/encrypt.cert.pem";
+	string cert_path = "./mailbox/users/" + recipient + "/certs/" + recipient + ".cert.pem";
 	fprintf(stderr, "CERTPATH: %s\n", cert_path.c_str());
 	if (access(cert_path.c_str(), F_OK) == -1)
 	{
