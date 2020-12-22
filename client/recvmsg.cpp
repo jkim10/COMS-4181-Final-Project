@@ -369,10 +369,10 @@ int main(int argc, char **argv)
 		fprintf(stderr, "No valid messages\n");
 		exit(1);
 	}
-	// string encrypted_message = verify(signed_message,sender_cert);
-	// if(encrypted_message.length() == 0) {exit(1);}
-	// string decrypted = decrypt(cert, encrypted_message);
-	string decrypted = decrypt(cert, pkey_path, signed_message);
+	string encrypted_message = verify(signed_message,sender_cert);
+	if(encrypted_message.length() == 0) {exit(1);}
+	string decrypted = decrypt(cert, pkey_path, encrypted_message);
+	// string decrypted = decrypt(cert, pkey_path, signed_message);
 	if(decrypted.length()==0){
 		fprintf(stderr,"Could not decrypt. Exiting.\n");
 		exit(1);
