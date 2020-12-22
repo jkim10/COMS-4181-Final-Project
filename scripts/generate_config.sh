@@ -68,7 +68,6 @@ echo default_bits        = 2048 >> $1
 echo distinguished_name  = req_distinguished_name>> $1
 echo string_mask         = utf8only>> $1
 echo prompt              = no>> $1
-echo output_password     = pass>> $1 # can this line be removed??
 echo default_md          = sha256 >> $1
 echo x509_extensions     = v3_ca>> $1
 echo ' ' >> $1 
@@ -123,8 +122,7 @@ elif [ $4 == server ]; then
         echo extendedKeyUsage = serverAuth >> $1
         echo subjectAltName = @alternate_names >> $1
         echo [ alternate_names ] >> $1
-        echo DNS.1 = www.example.com >> $1
-        echo DNS.2 = www.example.edu >> $1
+	echo DNS.1 = $3 >> $1
 fi
 
 echo ' '  >> $1
