@@ -52,6 +52,7 @@ string get_recip_certs(vector<string> recips, int message_len, string cert){
 	if (sock < 0) {
 		perror("socket");
 		SSL_CTX_free(ctx);
+		SSL_free(ssl);
 		return "";
 	}
 
@@ -96,7 +97,6 @@ string get_recip_certs(vector<string> recips, int message_len, string cert){
 
 	/* Get Response */
 	int response_code = get_status_code(ssl, ibuf);
-	// there are more specific values if we want to return nicer error messages...
 	if (response_code != 200)
 		goto out;
 	printf("Successfully received recipient certificates!\n");
@@ -109,12 +109,14 @@ string get_recip_certs(vector<string> recips, int message_len, string cert){
 	}
 
 	SSL_CTX_free(ctx);
+	SSL_free(ssl);
 	return body;
 	}
 
 
 out:
 	SSL_CTX_free(ctx);
+	SSL_free(ssl);
 	close(sock);
 	return "";		
 }
@@ -248,6 +250,7 @@ string send_encrypted_message(string recip, string encrypted, string sender_cert
 	if (sock < 0) {
 		perror("socket");
 		SSL_CTX_free(ctx);
+		SSL_free(ssl);
 		return "";
 	}
 
@@ -304,12 +307,14 @@ string send_encrypted_message(string recip, string encrypted, string sender_cert
 	}
 
 	SSL_CTX_free(ctx);
+	SSL_free(ssl);
 	return body;
 	}
 
 
 out:
 	SSL_CTX_free(ctx);
+	SSL_free(ssl);
 	close(sock);
 	return "";
 }

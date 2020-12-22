@@ -51,6 +51,7 @@ string get_encrypted_message(string cert){
 	if (sock < 0) {
 		perror("socket");
 		SSL_CTX_free(ctx);
+		SSL_free(ssl);
 		return "";
 	}
 
@@ -105,17 +106,19 @@ string get_encrypted_message(string cert){
 	}
 
 	SSL_CTX_free(ctx);
+	SSL_free(ssl);
 	return body;
 	}
 
 
 out:
 	SSL_CTX_free(ctx);
+	SSL_free(ssl);
 	close(sock);
 	return "";		
 }
 
-string decrypt(string cert, string message){
+string decrypt(string cert, string pkey_path, string message){
 	BIO *in = NULL, *out = NULL, *tbio = NULL, *key = NULL;
     X509 *rcert = NULL;
     EVP_PKEY *rkey = NULL;
@@ -144,7 +147,7 @@ string decrypt(string cert, string message){
 
     BIO_reset(tbio);
 
-	key = BIO_new_file("client.key.pem","r");
+	key = BIO_new_file(pkey_path.c_str(), "r");
     rkey = PEM_read_bio_PrivateKey(key, NULL, 0, NULL);
 
     if (!rcert || !rkey)
@@ -348,14 +351,15 @@ err:
 int main(int argc, char **argv)
 {
 	
-    if (argc != 2) {
-        fprintf(stderr, "Usage: ./recv <path/to/cert>\n");
+    if (argc != 3) {
+        fprintf(stderr, "Usage: ./recv <path/to/cert> <path/to/key>\n");
         exit(1);
     }
 	
 	string message;
 	string line;
 	string cert_path = argv[1];
+	string pkey_path = argv[2];
 	string cert = ReadFiletoString(cert_path.c_str());
 
 	string resp = get_encrypted_message(cert);
@@ -368,7 +372,7 @@ int main(int argc, char **argv)
 	// string encrypted_message = verify(signed_message,sender_cert);
 	// if(encrypted_message.length() == 0) {exit(1);}
 	// string decrypted = decrypt(cert, encrypted_message);
-	string decrypted = decrypt(cert, signed_message);
+	string decrypted = decrypt(cert, pkey_path, signed_message);
 	if(decrypted.length()==0){
 		fprintf(stderr,"Could not decrypt. Exiting.\n");
 		exit(1);
