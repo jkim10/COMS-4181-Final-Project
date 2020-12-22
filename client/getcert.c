@@ -121,6 +121,7 @@ int main(int argc, char **argv)
 		SSL_write(ssl, ibuf, res);
 	}
 	close(csr);
+	remove(csr_dest);
 
 	// End of request
 

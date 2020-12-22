@@ -26,6 +26,7 @@ list="$(ldd ./server | egrep -o '/lib.*\.[0-9]')"
 for i in $list; do cp -v --parents "$i" .; done
 
 cd ..
+sudo chown root:root $INSTALL_DEST
 sudo chown --recursive root:root $INSTALL_DEST/*
 sudo chmod --recursive o-r $INSTALL_DEST/*
 sudo chmod --recursive o-w $INSTALL_DEST/*

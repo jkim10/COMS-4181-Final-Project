@@ -10,10 +10,14 @@ fi
 # Generate config file
 ../scripts/generate_config.sh csr_config.cnf ./certificates $3 encrypt
 
+umask u=rw,go=
+
 # Create CSR from client's private key
 ret=$(openssl req -config csr_config.cnf \
         -key $1 \
         -new -sha256 -out $2 2>&1)
+
+umask 002
 
 if [ -z $ret ]; then
     exit 0
