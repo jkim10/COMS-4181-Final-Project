@@ -10,20 +10,20 @@ set -e
 INSTALL_DEST=$1
 
 cd $INSTALL_DEST
-mkdir bin
+mkdir -p bin
 
 # Install dependencies
-cp -v /bin/bash ./bin
-cp -v /bin/openssl ./bin
+cp /bin/bash ./bin
+cp /bin/openssl ./bin
 
 list="$(ldd /bin/bash | egrep -o '/lib.*\.[0-9]')"
-for i in $list; do cp -v --parents "$i" .; done
+for i in $list; do cp --parents "$i" .; done
 
 list="$(ldd /bin/openssl | egrep -o '/lib.*\.[0-9]')"
-for i in $list; do cp -v --parents "$i" .; done
+for i in $list; do cp --parents "$i" .; done
 
 list="$(ldd ./server | egrep -o '/lib.*\.[0-9]')"
-for i in $list; do cp -v --parents "$i" .; done
+for i in $list; do cp --parents "$i" .; done
 
 cd ..
 sudo chown root:root $INSTALL_DEST
@@ -31,6 +31,9 @@ sudo chown --recursive root:root $INSTALL_DEST/*
 sudo chmod --recursive o-r $INSTALL_DEST/*
 sudo chmod --recursive o-w $INSTALL_DEST/*
 sudo chmod --recursive o-x $INSTALL_DEST/*
+
+echo -e "Starting server..."
+echo -e "\n"
 
 cd $INSTALL_DEST
 # Start server with <install_dir> as root

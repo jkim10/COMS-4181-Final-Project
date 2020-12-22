@@ -82,20 +82,21 @@ string get_encrypted_message(string cert){
 	// Headers
 	SSL_write(ssl, cert_req.c_str(), cert_req.length());
 	SSL_write(ssl, content_length.c_str(), content_length.length());
-	// TODO: when we have certificates setup, uncomment this and replace duckduckgo
 	int message_len = 0;
 	message_len += cert.length();
+
 	SSL_write(ssl, to_string(message_len).c_str(), to_string(message_len).length());
 	SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));
-	// SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));
+
 	// Body
 	SSL_write(ssl, cert.c_str(), cert.length());
 
 	int response_code = get_status_code(ssl, ibuf);
-	printf("Received encrypted message!\n");
-	// there are more specific values if we want to return nicer error messages...
-	if (response_code != 200)
+	if (response_code != 200) {
+		fprintf(stderr, "Failed with code=%d\n", response_code);
 		goto out;
+	}
+		
 
 	// Read past the rest of the headers
 	skip_headers(ssl);
@@ -365,7 +366,7 @@ int main(int argc, char **argv)
 	string resp = get_encrypted_message(cert);
 	string sender_cert = ParseSenderCert(resp);
 	string signed_message = ParseRMMessage(resp);
-	if(signed_message.length() == 0){
+	if(signed_message.length() == 0 || resp == ""){
 		fprintf(stderr, "No valid messages\n");
 		exit(1);
 	}

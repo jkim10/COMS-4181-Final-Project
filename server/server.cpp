@@ -196,7 +196,10 @@ int main(int argc, char* argv[])
 				else
 				{
 					string encrypt_cert = CertstoSend(client_cert, recipients);
-					my::send_http_response(bio.get(), 200, encrypt_cert);
+					if (encrypt_cert == "")
+						my::send_errors_and_throw(bio.get(), 400, "Bad certificate");
+					else
+						my::send_http_response(bio.get(), 200, encrypt_cert);
 				}
 			} else if (request.endpoint == "upload") {
 				// TODO: Takes in a recipient with an encrypted message
@@ -210,7 +213,10 @@ int main(int argc, char* argv[])
 					my::send_errors_and_throw(bio.get(), 400, "Message fails to upload");
 			} else if (request.endpoint == "recvmsg") {
 				string message = ParseRecvmsg(request.body);
-				my::send_http_response(bio.get(), 200, message);
+				if (message == "")
+					my::send_errors_and_throw(bio.get(), 400, "Failed to receive messages");
+				else
+					my::send_http_response(bio.get(), 200, message);
 			} else {
 				my::send_errors_and_throw(bio.get(), 400, "Request Method/Endpoint Not Found!");
 			}

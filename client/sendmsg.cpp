@@ -97,9 +97,12 @@ string get_recip_certs(vector<string> recips, int message_len, string cert){
 
 	/* Get Response */
 	int response_code = get_status_code(ssl, ibuf);
-	if (response_code != 200)
+	if (response_code != 200) {
+		fprintf(stderr, "Failed with code=%d\n", response_code);
 		goto out;
+	}
 	printf("Successfully received recipient certificates!\n");
+
 	// Read past the rest of the headers
 	skip_headers(ssl);
 	string body = "";

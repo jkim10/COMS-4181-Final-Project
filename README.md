@@ -16,4 +16,6 @@ Jiayang Zhou jz3121
 
 3. Run ./test.sh in test directory for `getcert` and `changepw` tests. Tests of `sendmsg` and `recvmsg` need to be done manually.
 
+To run the server again after it has been stopped without having to regenerate everything, run `sudo scripts/chroot.sh $INSTALL_DEST` from the top-level directory.
+
 See design documents for more detailed information.

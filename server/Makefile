@@ -1,5 +1,5 @@
-CC=clang++
-CXX=clang++
+CC=g++
+CXX=g++
 CXXFLAGS=-std=c++14 -O3 -Wall
 LDFLAGS=
 LDLIBS=-lssl -lcrypto
