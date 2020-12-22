@@ -1,0 +1,31 @@
+Tests done in client folder
+
+Sendmsg: 
+1. Random file as cert
+    - ./sendmsg recvmsg client.key.pem addleness (single recipient)
+    - ./sendmsg recvmsg client.key.pem addleness analects (multiple recipients)
+2. Non-exist cert
+    - ./sendmsg client.pem client.key.pem addleness 
+    - ./sendmsg client.pem client.key.pem addleness analects 
+3. Invalid cert
+    - ./sendmsg client.cert.pem client.key.pem addleness
+    - ./sendmsg client.cert.pem client.key.pem addleness analects
+4. Invalid recipient name(s)
+    - ./sendmsg ../test/certificate/addleness.cert.pem ../test/addleness.key.pem addle (single recipient)
+    - ./sendmsg ../test/certificate/addleness.cert.pem ../test/addleness.key.pem a#a analects (multiple recipients/partial invalid)
+    - ./sendmsg ../test/certificate/addleness.cert.pem ../test/addleness.key.pem !// _analects (multiple recipients/all invalid) (bash: !//: event not found)
+5. Send to a large number of recipients (Should we limit the number of recipients in a single sendmsg?)
+
+6. Send a large file
+    - ./sendmsg recvmsg client.key.pem addleness < largefile
+    - ./sendmsg recvmsg client.key.pem addleness analects < largefile
+
+Recvmsg:
+1. Random file as cert
+    - ./recvmsg sendmsg
+2. Non-exist cert
+    - ./recvmsg client.pem
+3. Invalid cert
+    - ./recvmsg client.cert.pem
+4. Extract a message when there is none
+    - ./recvmsg ../test/certificate/addleness.cert.pem
