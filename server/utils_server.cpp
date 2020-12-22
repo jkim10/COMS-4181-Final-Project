@@ -123,7 +123,9 @@ bool isValidCert(const char* client_cert_path, const char* intermediate_cert_pat
 bool VerifyCert(string client_cert)
 {
 	WriteStringtoFile(client_cert, "./mailbox/tmp/client.cert.pem");
-	return isValidCert("./mailbox/tmp/client.cert.pem", "./mailbox/tmp/intermediate.cert.pem");
+	bool stat = isValidCert("./mailbox/tmp/client.cert.pem", "./intermediate/certs/intermediate.cert.pem");
+	remove("./mailbox/tmp/client.cert.pem");
+	return stat;
 }
 
 bool isNumeric(const string &str)
