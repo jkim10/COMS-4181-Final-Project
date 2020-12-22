@@ -392,7 +392,8 @@ string sign(string cert, string pKey, string message){
 
     BIO_reset(tbio);
 
-    key = BIO_new_file("client.key.pem","r");
+    key = BIO_new(BIO_s_mem());
+	BIO_puts(key, pKey.c_str());
     skey = PEM_read_bio_PrivateKey(key, NULL, 0, NULL);
 
     if (!scert || !skey)
@@ -501,13 +502,13 @@ int main(int argc, char **argv)
 			//Encrypt to Certificate and sign
 			if(cert.length() > 0){
 				string encrypted = encrypt(cert,message);
-				string resp = send_encrypted_message(recip, encrypted, cert); // Comment this out and uncomment below when ready
-				// string signed_message = sign(sender_cert, pKey, encrypted);
-				// if(signed_message.length() == 0){
-				// 	fprintf(stderr,"Could not sign certificate with provided key and certificate\n");
-				// 	exit(1);
-				// }
-				// string resp = send_encrypted_message(recip, signed_message, cert);
+				// string resp = send_encrypted_message(recip, encrypted, cert); // Comment this out and uncomment below when ready
+				string signed_message = sign(sender_cert, pKey, encrypted);
+				if(signed_message.length() == 0){
+					fprintf(stderr,"Could not sign certificate with provided key and certificate\n");
+					exit(1);
+				}
+				string resp = send_encrypted_message(recip, signed_message, cert);
 			}
 		}
 	}
