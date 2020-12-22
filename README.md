@@ -11,6 +11,7 @@ Jiayang Zhou jz3121
 
 ## Instructions
 1. Run `./install.sh $INSTALL_DEST` to install and start the server in (assumed to be previously non-existent) directory `$INSTALL_DEST`. You will be prompted for a password; it is located in `$INSTALL_DEST/pwds/server_pass`.
+(sudo apt-get install libssl-dev if openssl/bio.h not found, and clang++ is needed)
 
 2. Type `make` in client directory to compile client programs. To generate private keys for testing, use `scripts/client_gen_key.sh $FILE_DEST`.
 
