@@ -29,10 +29,15 @@ done
 chmod 500 $PWDS_DIR
 #sudo chown root:root $PWDS_DIR
 
+TMP_DIR=$(readlink -m $INSTALL_DEST/tmp)
+mkdir -p $TMP_DIR
+
 cd scripts
 ./root_intermediate.sh $PWDS_DIR/rca_pass $PWDS_DIR/ica_pass
+sudo cp root_ca/certs/ca.cert.pem ../client
 ./server_setup.sh $PWDS_DIR/server_pass $PWDS_DIR/ica_pass
 cp -r intermediate $INSTALL_DEST/intermediate
+sudo cp intermediate/certs/intermediate.cert.pem ../client
 mkdir -p $INSTALL_DEST/serv_conf
 cp certs/*.cert.pem $INSTALL_DEST/serv_conf/
 cp certs/*.key.pem $INSTALL_DEST/serv_conf/
@@ -56,3 +61,5 @@ set +e
 echo -e "\n"
 echo -e "Installation finished successfully!"
 echo -e "\n"
+
+scripts/chroot.sh $INSTALL_DEST

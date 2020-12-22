@@ -9,6 +9,8 @@
 
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <sys/wait.h>
 
 #include "utils.h"
@@ -61,20 +63,13 @@ void write_certificate(std::string cert, std::string username) {
 }
 
 std::string sign_client_csr(const std::string& csr) {
-	/*
-	static const std::string OPENSSL_EXE = "/usr/bin/openssl";
-	static const std::string OPENSSL_EXE = \
-	R"(openssl ca -config $ICA_DIR/$ICA_CONFIG \
-	-extensions $ICA_Config_Extension \
-	-days 375 -notext -md sha256 -batch \
-	-passin $KEY_PASS)";
-	*/
 	
 	int saved_errno = -1;
 	std::string saved_errmsg;
 	
 	pid_t pid, wpid;
 	int pipefd_out[2], pipefd_in[2];
+	std::string tmp = std::tmpnam(nullptr);
 	
 	if (pipe(pipefd_out) < 0) {
 		saved_errno = errno;
@@ -105,8 +100,21 @@ std::string sign_client_csr(const std::string& csr) {
 			goto child_exit;
 		}
 		
+		// close unused fds
 		close(pipefd_out[0]);
 		close(pipefd_in[1]);
+
+		// write to temp file so that openssl can read
+		int read_size, res;
+		char buf[1024];
+		int tmp_file = open(tmp.c_str(), O_CREAT | O_WRONLY);
+		while((read_size = read(STDIN_FILENO, buf, sizeof(buf))) > 0) {
+			res = write(tmp_file, buf, read_size);
+		}
+
+		close(tmp_file);
+
+		fprintf(stderr, "read file\n");
 		
 		char exe_path[] = "openssl";
 		execlp(
@@ -115,7 +123,7 @@ std::string sign_client_csr(const std::string& csr) {
 			"-extensions", "usr_cert", \
 			"-days", "375", "-notext", \
 			"-md", "sha256", "-batch", \
-			"-in", "/dev/stdin", \
+			"-in", tmp.c_str(), \
 			"-passin", "file:pwds/ica_pass", \
 			NULL);
 		
@@ -164,6 +172,9 @@ std::string sign_client_csr(const std::string& csr) {
 		}
 	
 		// child completed normally
+
+		// remove tempfile
+		remove(tmp.c_str());
 	
 		return signed_cert;
 	}
