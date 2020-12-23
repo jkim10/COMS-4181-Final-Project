@@ -66,8 +66,9 @@ string ReturnCert(string recipient)
 
 string GetCert(string recipient)
 {
-	if (isValidRecipient(recipient))
+	if (isValidRecipient(recipient)){
 		return ReturnCert(recipient);
+	}
 	else
 		return ".\n";
 }
@@ -316,7 +317,7 @@ string GetMessage(string recipient)
 	return message;
 }
 
-string ParseSendmsg(string content, vector<string> &recipients)
+string ParseSendmsg(string content)
 {
 	if (content.back() != '\n')
 	{
@@ -332,28 +333,51 @@ string ParseSendmsg(string content, vector<string> &recipients)
 	}
 
 	string client_cert = content.substr(0, found);
-	content = content.substr(found, content.length()-found);
-	while (content.length() > 0)
-	{
-		found = content.find('\n');
-		recipients.push_back(content.substr(0, found));
-		content = content.substr(found+1, content.length()-found-1);
-	}
-
 	return client_cert;
 }
+vector<string> ParseRecipients(string content){
+	vector<string> recipients;
+	if (content.back() != '\n')
+	{
+		cerr << "Wrong format: need a new line at the end" << endl;
+		return recipients;
+	}
 
+	size_t found = content.find("-----END CERTIFICATE-----") + 25 + 1;
+	if (found > content.length())
+	{
+		cerr << "Invalid certificate: lack of end of certificate" << endl;
+		return recipients;
+	}
+	content = content.substr(found);
+	// while (content.length() > 0)
+	// {
+	// 	found = content.find('\n');
+	// 	recipients.push_back(content.substr(0, found));
+	// 	content = content.substr(found+1);
+	// 	printf("=======\n%s\n========",content.c_str());
+	// }
+	stringstream ss(content);
+	string name;
+	while(getline(ss,name,'\n')){
+		name.erase(remove_if(name.begin(), name.end(), [](char c) { return !isalpha(c); } ), name.end());
+		if(name != ""){
+			recipients.push_back(name);
+		}
+	}
+
+	return recipients;
+}
 string CertstoSend(string client_cert, vector<string> recipients)
 {
 	string encrypt_certs = "";
 	if (VerifyCert(client_cert))
 	{
-		for (int i = 0; i < recipients.size(); ++i)
+		for(string x: recipients)
 		{
-			encrypt_certs += GetCert(recipients[i]);
+			encrypt_certs += GetCert(x);
 		}
 	}
-
 	return encrypt_certs;
 }
 
@@ -389,4 +413,93 @@ string ParseRecvmsg(string content)
 	}
 
 	return message;
+}
+
+string ParseSignature(string message){
+	BIO *in = NULL, *out = NULL, *tbio = NULL, *cont = NULL, *sender = NULL, *inter = NULL;
+    X509_STORE *st = NULL;
+    X509 *cacert = NULL;
+	X509 *scert = NULL;
+	X509 *intercert = NULL;
+    CMS_ContentInfo *cms = NULL;
+	FILE* tmp = tmpfile();
+	string verified = "";
+	int c;
+    OpenSSL_add_all_algorithms();
+    ERR_load_crypto_strings();
+
+    /* Set up trusted CA certificate store */
+
+    st = X509_STORE_new();
+
+    /* Read in CA certificate */
+    tbio = BIO_new_file("ca.cert.pem", "r");
+
+    if (!tbio)
+        goto err;
+
+    cacert = PEM_read_bio_X509(tbio, NULL, 0, NULL);
+
+    if (!cacert)
+        goto err;
+
+    if (!X509_STORE_add_cert(st, cacert))
+        goto err;
+
+    /* Open message being verified */
+
+    in = BIO_new(BIO_s_mem());
+	BIO_puts(in, message.c_str());
+
+    if (!in)
+        goto err;
+
+    /* parse message */
+    cms = SMIME_read_CMS(in, &cont);
+
+    if (!cms)
+        goto err;
+
+    /* File to output verified content to */
+    out = BIO_new_fp(tmp,BIO_CLOSE);
+    if (!out){
+        goto err;
+	}
+
+	inter = BIO_new_file("./intermediate/certs/intermediate.cert.pem", "r");
+	intercert = PEM_read_bio_X509(inter,NULL,0,NULL);
+	if (!X509_STORE_add_cert(st, intercert))
+        goto err;
+
+    if (!CMS_verify(cms, NULL, st, cont, out, 0)) {
+        fprintf(stderr, "Verification Failure\n");
+        goto err;
+    }
+
+    fprintf(stderr, "Verification Successful\n");
+
+    //Hacky way to read out a BIO
+	rewind(tmp);
+	while ((c = getc(tmp)) != EOF){
+		verified += c;
+	}
+
+ err:
+
+    if (verified == "") {
+        fprintf(stderr, "Error Verifying Data\n");
+        ERR_print_errors_fp(stderr);
+    }
+
+    CMS_ContentInfo_free(cms);
+    X509_free(cacert);
+	X509_free(scert);
+	X509_free(intercert);
+    BIO_free(in);
+    BIO_free(out);
+    BIO_free(tbio);
+	BIO_free(cont);
+	BIO_free(sender);
+	BIO_free(inter);
+    return verified;
 }

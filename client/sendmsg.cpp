@@ -15,7 +15,7 @@ extern "C"
 	#include "client_utils.h"
 }
 using namespace std;
-string get_recip_certs(vector<string> recips, int message_len, string cert){
+string get_recip_certs(string signed_request){
 	SSL_CTX *ctx;
 	SSL *ssl;
 	const SSL_METHOD *meth;
@@ -85,23 +85,18 @@ string get_recip_certs(vector<string> recips, int message_len, string cert){
 	SSL_write(ssl, content_length.c_str(), content_length.length());
 	// TODO: when we have certificates setup, uncomment this and replace duckduckgo
 	// string cert = ReadFiletoString("./duckduckgo.pem");
-	message_len += cert.length();
+	int message_len = signed_request.length();
 	SSL_write(ssl, to_string(message_len).c_str(), to_string(message_len).length());
 	SSL_write(ssl, "\r\n\r\n", strlen("\r\n\r\n"));
 	// Body
-	SSL_write(ssl, cert.c_str(), cert.length());
-	for (string x : recips) {
-		SSL_write(ssl, x.c_str(), x.length());
-	    SSL_write(ssl, newline.c_str(), newline.length());
-	}
-
+	SSL_write(ssl, signed_request.c_str(), signed_request.length());
 	/* Get Response */
 	int response_code = get_status_code(ssl, ibuf);
 	if (response_code != 200) {
 		fprintf(stderr, "Failed with code=%d\n", response_code);
 		goto out;
 	}
-	printf("Successfully received recipient certificates!\n");
+	
 
 	// Read past the rest of the headers
 	skip_headers(ssl);
@@ -109,6 +104,11 @@ string get_recip_certs(vector<string> recips, int message_len, string cert){
 	while ((ilen = SSL_read(ssl, ibuf, sizeof ibuf - 1)) > 0) {
 		ibuf[ilen] = '\0';
 		body += ibuf;
+	}
+	if(body.length() < 25){
+		printf("No certificates received!\n");
+	} else{
+		printf("Successfully received recipient certificates!\n");
 	}
 
 	SSL_CTX_free(ctx);
@@ -123,7 +123,15 @@ out:
 	close(sock);
 	return "";		
 }
-
+string append_recips(string sender_cert, vector<string> recips){
+	string request = "";
+	request += sender_cert;
+	for (string x : recips) {
+		request += x;
+		request += '\n';
+	}
+	return request;
+}
 /*
 	Encrypts and Sign Message
 */
@@ -292,7 +300,6 @@ string send_encrypted_message(string recip, string encrypted, string sender_cert
 	SSL_write(ssl, "@",1);
 	SSL_write(ssl, sender_cert.c_str(), sender_cert.length());
 	SSL_write(ssl, encrypted.c_str(), encrypted.length());
-
 
 	/* Get Response and return body*/
 	int response_code = get_status_code(ssl, ibuf);
@@ -480,8 +487,9 @@ int main(int argc, char **argv)
 	string pKey = ReadFiletoString(pKey_path.c_str());
 
 	// Make Request to Server for recipient certs
-	string cert_resp = get_recip_certs(recips,content_length, sender_cert);
-
+	string request = append_recips(sender_cert,recips);
+	string signed_request = sign(sender_cert,pKey,request);
+	string cert_resp = get_recip_certs(signed_request);
 	// Upload Messages
 	if(cert_resp.length() > 2){ // At least one valid cert
 		std::stringstream ss(cert_resp);
@@ -511,7 +519,7 @@ int main(int argc, char **argv)
 					fprintf(stderr,"Could not sign certificate with provided key and certificate\n");
 					exit(1);
 				}
-				string resp = send_encrypted_message(recip, signed_message, cert);
+				string resp = send_encrypted_message(recip, signed_message, sender_cert);
 			}
 		}
 	}

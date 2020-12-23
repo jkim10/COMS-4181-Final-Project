@@ -10,6 +10,7 @@
 #include <openssl/cms.h>
 #include <openssl/err.h>
 #include <openssl/bio.h>
+
 extern "C"
 {
 	#include "client_utils.h"
@@ -349,6 +350,91 @@ err:
     return isMatch;
 }
 
+string sign(string cert, string pKey, string message){
+	BIO *in = NULL, *out = NULL, *tbio = NULL, *key = NULL;
+    X509 *scert = NULL;
+    EVP_PKEY *skey = NULL;
+    CMS_ContentInfo *cms = NULL;
+	FILE* tmp = tmpfile();
+	string signed_message = "";
+	int c;
+
+    /*
+     * For simple S/MIME signing use CMS_DETACHED. On OpenSSL 1.0.0 only: for
+     * streaming detached set CMS_DETACHED|CMS_STREAM for streaming
+     * non-detached set CMS_STREAM
+     */
+    int flags = CMS_DETACHED | CMS_STREAM;
+
+    OpenSSL_add_all_algorithms();
+    ERR_load_crypto_strings();
+
+    /* Read in signer certificate and private key */
+    tbio = BIO_new(BIO_s_mem());
+	BIO_puts(tbio, cert.c_str());
+
+    if (!tbio)
+        goto err;
+
+    scert = PEM_read_bio_X509(tbio, NULL, 0, NULL);
+
+    BIO_reset(tbio);
+
+    key = BIO_new(BIO_s_mem());
+	BIO_puts(key, pKey.c_str());
+    skey = PEM_read_bio_PrivateKey(key, NULL, 0, NULL);
+
+    if (!scert || !skey)
+        goto err;
+
+    /* Open content being signed */
+
+    in = BIO_new(BIO_s_mem());
+	BIO_puts(in, message.c_str());
+
+    if (!in)
+        goto err;
+
+    /* Sign content */
+    cms = CMS_sign(scert, skey, NULL, in, flags);
+
+    if (!cms)
+        goto err;
+
+    out = BIO_new_fp(tmp,BIO_CLOSE);
+    if (!out)
+        goto err;
+
+    if (!(flags & CMS_STREAM))
+        BIO_reset(in);
+
+    /* Write out S/MIME message */
+    if (!SMIME_write_CMS(out, cms, in, flags))
+        goto err;
+
+    rewind(tmp);
+	while ((c = getc(tmp)) != EOF){
+		signed_message += c;
+	}
+
+ err:
+
+    if (signed_message == "") {
+        fprintf(stderr, "Error Signing Data\n");
+        ERR_print_errors_fp(stderr);
+    }
+
+    CMS_ContentInfo_free(cms);
+    X509_free(scert);
+    EVP_PKEY_free(skey);
+    BIO_free(in);
+    BIO_free(out);
+	BIO_free(key);
+    BIO_free(tbio);
+    return signed_message;
+}
+
+
 int main(int argc, char **argv)
 {
 	
@@ -362,12 +448,13 @@ int main(int argc, char **argv)
 	string cert_path = argv[1];
 	string pkey_path = argv[2];
 	string cert = ReadFiletoString(cert_path.c_str());
-
-	string resp = get_encrypted_message(cert);
+	string pkey = ReadFiletoString(pkey_path.c_str());
+	string signed_cert = sign(cert,pkey,cert);
+	string resp = get_encrypted_message(signed_cert);
 	string sender_cert = ParseSenderCert(resp);
 	string signed_message = ParseRMMessage(resp);
 	if(signed_message.length() == 0 || resp == ""){
-		fprintf(stderr, "No valid messages\n");
+		fprintf(stderr, "No valid messages or private key and certificate failed\n");
 		exit(1);
 	}
 	string encrypted_message = verify(signed_message,sender_cert);

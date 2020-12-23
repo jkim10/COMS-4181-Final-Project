@@ -19,6 +19,9 @@
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
+#include <openssl/cms.h>
+#include <openssl/asn1.h>
+
 
 using namespace std;
 
@@ -36,8 +39,12 @@ int ParseMessages(string content);
 
 string GetMessage(string recipient);
 
-string ParseSendmsg(string content, vector<string> &recipients);
+string ParseSendmsg(string content);
 
 string CertstoSend(string client_cert, vector<string> recipients);
 
 string ParseRecvmsg(string content);
+
+string ParseSignature(string content);
+
+vector<string> ParseRecipients(string content);

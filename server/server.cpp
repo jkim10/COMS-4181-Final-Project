@@ -14,6 +14,11 @@
 #include "utils_server.h"
 #include "utils.h"
 
+#include <openssl/pem.h>
+#include <openssl/cms.h>
+#include <openssl/err.h>
+#include <openssl/bio.h>
+
 namespace my {
 
 std::vector<std::string> split_headers(const std::string& text)
@@ -190,19 +195,25 @@ int main(int argc, char* argv[])
 			} else if (request.endpoint == "sendmsg") {
 				// TODO: sendmsg
 				vector<string> recipients;
-				string client_cert = ParseSendmsg(request.body, recipients);
-				if (client_cert == "")
-					my::send_errors_and_throw(bio.get(), 400, "Invalid request");
-				else
-				{
-					string encrypt_cert = CertstoSend(client_cert, recipients);
-					if (encrypt_cert == "")
-						my::send_errors_and_throw(bio.get(), 400, "Bad certificate");
+				string verified = ParseSignature(request.body);
+				if(verified == ""){
+					my::send_errors_and_throw(bio.get(), 400, "Failed to receive messages");
+				} else {
+					string client_cert = ParseSendmsg(verified);
+					recipients = ParseRecipients(verified);
+					if (client_cert == "")
+						my::send_errors_and_throw(bio.get(), 400, "Invalid request");
 					else
-						my::send_http_response(bio.get(), 200, encrypt_cert);
+					{
+						string encrypt_cert = CertstoSend(client_cert, recipients);
+						if (encrypt_cert == "")
+							my::send_errors_and_throw(bio.get(), 400, "Bad certificate");
+						else
+							my::send_http_response(bio.get(), 200, encrypt_cert);
+					}
 				}
+				
 			} else if (request.endpoint == "upload") {
-				// TODO: Takes in a recipient with an encrypted message
 				// Header: POST /upload HTTP/1.1\r\n
 				//		   Content:Length: <length>
 				// Format of Body: @username@<encrypted message>
@@ -212,11 +223,16 @@ int main(int argc, char* argv[])
 				else
 					my::send_errors_and_throw(bio.get(), 400, "Message fails to upload");
 			} else if (request.endpoint == "recvmsg") {
-				string message = ParseRecvmsg(request.body);
-				if (message == "")
+				string verified = ParseSignature(request.body);
+				if(verified == ""){
 					my::send_errors_and_throw(bio.get(), 400, "Failed to receive messages");
-				else
-					my::send_http_response(bio.get(), 200, message);
+				} else {
+					string message = ParseRecvmsg(verified);
+					if (message == "")
+						my::send_errors_and_throw(bio.get(), 400, "Failed to receive messages");
+					else
+						my::send_http_response(bio.get(), 200, message);
+				}
 			} else {
 				my::send_errors_and_throw(bio.get(), 400, "Request Method/Endpoint Not Found!");
 			}

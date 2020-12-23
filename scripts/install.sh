@@ -49,7 +49,9 @@ cd ..
 cd server
 make
 cp server $INSTALL_DEST
+sudo cp ../scripts/root_ca/certs/ca.cert.pem $INSTALL_DEST
 cd ..
+
 
 pushd $INSTALL_DEST
 ./create-tree.sh
